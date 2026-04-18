@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head><style>body{margin:0;padding:1rem;font-family:sans-serif;} svg{width:100%;}</style></head>
+<body>
+<div id="erd4"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { fontSize: '13px' } });
+const { svg } = await mermaid.render('erd4-svg', `erDiagram
+  User {
+    guid Id PK
+    string Email
+    string DisplayName
+  }
+  Garden {
+    guid Id PK
+    string Name
+  }
+  GardenBed {
+    guid Id PK
+    string Name
+  }
+  WeatherObservation {
+    guid Id PK
+    guid UserId FK
+    datetime ObservedAt
+    decimal TemperatureF
+    decimal Humidity
+    decimal WindSpeedMph
+    int WindDirectionDegrees
+    decimal PrecipitationRateInPerHr
+    decimal PrecipitationTotalIn
+    decimal UvIndex
+    decimal DewPointF
+    decimal PressureInHg
+    enum Source
+    string StationId
+  }
+  UserInsight {
+    guid Id PK
+    guid UserId FK
+    guid GardenId FK
+    guid GardenBedId FK
+    enum InsightType
+    string Title
+    string Body
+    bool IsRead
+    datetime ExpiresAt
+    datetime GeneratedAt
+  }
+  User ||--o{ WeatherObservation : "records"
+  User ||--o{ UserInsight : "receives"
+  Garden ||--o{ UserInsight : "scoped to"
+  GardenBed ||--o{ UserInsight : "scoped to"
+`);
+document.getElementById('erd4').innerHTML = svg;
+</script>
+</body>
+</html>

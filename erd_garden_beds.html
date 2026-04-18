@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head><style>body{margin:0;padding:1rem;font-family:sans-serif;} svg{width:100%;}</style></head>
+<body>
+<div id="erd2"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { fontSize: '13px' } });
+const { svg } = await mermaid.render('erd2-svg', `erDiagram
+  Household {
+    guid Id PK
+    string Name
+  }
+  Garden {
+    guid Id PK
+    guid HouseholdId FK
+    string Name
+    string Description
+    datetime CreatedAt
+  }
+  GardenType {
+    int Id PK
+    string Name
+  }
+  GardenGardenType {
+    guid GardenId FK
+    int GardenTypeId FK
+  }
+  GardenMember {
+    guid Id PK
+    guid GardenId FK
+    guid UserId FK
+    enum Role
+    guid InvitedByUserId FK
+  }
+  GardenBed {
+    guid Id PK
+    guid GardenId FK
+    string Name
+    enum Type
+    enum Shape
+    decimal LengthFeet
+    decimal WidthFeet
+    decimal DiameterFeet
+    decimal DepthInches
+    decimal VolumeGallons
+    string SoilType
+    enum SunExposure
+    string Notes
+  }
+  SoilTest {
+    guid Id PK
+    guid GardenBedId FK
+    datetime TestedAt
+    decimal PhLevel
+    decimal NitrogenPpm
+    decimal PhosphorusPpm
+    decimal PotassiumPpm
+    decimal OrganicMatterPercent
+    enum TestSource
+    string Notes
+    datetime CreatedAt
+  }
+  GardenTask {
+    guid Id PK
+    guid GardenId FK
+    guid GardenBedId FK
+    guid PlantingId FK
+    guid AssignedToUserId FK
+    string Title
+    string Description
+    enum TaskType
+    datetime DueDate
+    datetime CompletedAt
+    datetime CreatedAt
+  }
+  Household ||--o{ Garden : "owns"
+  Garden ||--o{ GardenGardenType : "tagged with"
+  GardenType ||--o{ GardenGardenType : "used by"
+  Garden ||--o{ GardenMember : "has members"
+  Garden ||--o{ GardenBed : "contains"
+  Garden ||--o{ GardenTask : "has tasks"
+  GardenBed ||--o{ SoilTest : "tested by"
+  GardenBed ||--o{ GardenTask : "scoped to"
+`);
+document.getElementById('erd2').innerHTML = svg;
+</script>
+</body>
+</html>

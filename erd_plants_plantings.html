@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head><style>body{margin:0;padding:1rem;font-family:sans-serif;} svg{width:100%;}</style></head>
+<body>
+<div id="erd3"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { fontSize: '13px' } });
+const { svg } = await mermaid.render('erd3-svg', `erDiagram
+  Plant {
+    guid Id PK
+    string ExternalId
+    enum ExternalSource
+    guid ContributedByUserId FK
+    bool IsGlobal
+    bool IsApproved
+    string CommonName
+    string ScientificName
+    string Description
+    int DaysToMaturity
+    decimal MinSpacingInches
+    string SunRequirement
+    string WaterRequirement
+    decimal MinDepthInches
+    datetime CachedAt
+  }
+  PlantCompanion {
+    guid PlantId FK
+    guid CompanionPlantId FK
+    enum RelationshipType
+  }
+  GardenBed {
+    guid Id PK
+    string Name
+  }
+  Planting {
+    guid Id PK
+    guid GardenBedId FK
+    guid PlantId FK
+    date PlantedDate
+    date ExpectedHarvestDate
+    date ActualEndDate
+    enum Status
+    enum PlantingType
+    int Quantity
+    int SeasonYear
+    enum SeasonType
+    bool IsActive
+    datetime DeletedAt
+  }
+  PlantingObservation {
+    guid Id PK
+    guid PlantingId FK
+    enum ObservationType
+    string Note
+    datetime ObservedAt
+  }
+  PestDiseaseLog {
+    guid Id PK
+    guid PlantingId FK
+    guid GardenBedId FK
+    datetime ObservedAt
+    enum Type
+    string Name
+    enum Severity
+    string TreatmentApplied
+    datetime ResolvedAt
+    string Notes
+  }
+  AmendmentLog {
+    guid Id PK
+    guid GardenBedId FK
+    guid PlantingId FK
+    datetime AppliedAt
+    string ProductName
+    enum AmendmentType
+    decimal Quantity
+    enum QuantityUnit
+    string Notes
+  }
+  HarvestLog {
+    guid Id PK
+    guid PlantingId FK
+    guid HarvestedByUserId FK
+    date HarvestDate
+    decimal Quantity
+    enum QuantityUnit
+    string Notes
+    datetime CreatedAt
+  }
+  Plant ||--o{ PlantCompanion : "has companions"
+  Plant ||--o{ Planting : "planted as"
+  GardenBed ||--o{ Planting : "contains"
+  Planting ||--o{ PlantingObservation : "observed in"
+  Planting ||--o{ PestDiseaseLog : "affected by"
+  GardenBed ||--o{ PestDiseaseLog : "bed-wide"
+  Planting ||--o{ AmendmentLog : "amended by"
+  GardenBed ||--o{ AmendmentLog : "bed-wide"
+  Planting ||--o{ HarvestLog : "harvested from"
+`);
+document.getElementById('erd3').innerHTML = svg;
+</script>
+</body>
+</html>

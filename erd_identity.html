@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head><style>body{margin:0;padding:1rem;font-family:sans-serif;} svg{width:100%;}</style></head>
+<body>
+<div id="erd1"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { fontSize: '13px' } });
+const { svg } = await mermaid.render('erd1-svg', `erDiagram
+  User {
+    guid Id PK
+    string Email
+    string PasswordHash
+    string DisplayName
+    datetime CreatedAt
+  }
+  UserSettings {
+    guid Id PK
+    guid UserId FK
+    decimal LocationLatitude
+    decimal LocationLongitude
+    string PreferredLanguage
+    enum TemperatureUnit
+    enum LengthUnit
+    enum WeightUnit
+    enum VolumeUnit
+    string UsdaHardinessZone
+    date FrostDateSpring
+    date FrostDateFall
+    bool ShareWeatherData
+    bool SharePlantingData
+    bool ShareHarvestData
+  }
+  Household {
+    guid Id PK
+    string Name
+    guid OwnedByUserId FK
+    datetime CreatedAt
+  }
+  HouseholdMember {
+    guid Id PK
+    guid HouseholdId FK
+    guid UserId FK
+    enum Role
+    datetime JoinedAt
+  }
+  WeatherStationIntegration {
+    guid Id PK
+    guid UserId FK
+    enum Provider
+    string StationId
+    string ApiKey
+    datetime CreatedAt
+  }
+  User ||--|| UserSettings : "has"
+  User ||--o{ HouseholdMember : "belongs to"
+  Household ||--o{ HouseholdMember : "has members"
+  User ||--o| WeatherStationIntegration : "has"
+`);
+document.getElementById('erd1').innerHTML = svg;
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GardenCompanion.Api/GardenCompanion.Api.csproj" />
+  </Folder>
+</Solution>

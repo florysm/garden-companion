@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet --version)",
+      "Bash(npm --version)",
+      "Bash(dotnet new:*)",
+      "Bash(mkdir -p src)",
+      "Bash(dotnet sln:*)",
+      "Bash(dotnet add:*)",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(dotnet build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(dotnet ef:*)",
+      "Bash(curl -v -X POST http://localhost:5100/api/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"bob@example.com\",\"password\":\"Garden123!\",\"displayName\":\"Bob\"}')",
+      "Bash(kill -9 60947)",
+      "Bash(ASPNETCORE_ENVIRONMENT=Development dotnet run --urls http://localhost:5101 --no-launch-profile)",
+      "Bash(curl -s http://localhost:5101/api/auth/login -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{\"email\":\"alice@example.com\",\"password\":\"Garden123!\"}')"
+    ]
+  }
+}

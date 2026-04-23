@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using FluentValidation;
 using GardenCompanion.Api.Common;
 using GardenCompanion.Api.Features.Auth;
@@ -24,6 +25,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── JSON ──────────────────────────────────────────────────────────────────────
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 // ── Database ─────────────────────────────────────────────────────────────────
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -123,6 +128,7 @@ UpsertWeatherStationEndpoint.Map(api);
 DeleteWeatherStationEndpoint.Map(api);
 
 // Gardens
+GetGardenTypesEndpoint.Map(api);
 GetGardensEndpoint.Map(api);
 CreateGardenEndpoint.Map(api);
 GetGardenEndpoint.Map(api);
@@ -156,6 +162,9 @@ GetSoilTestEndpoint.Map(api);
 SearchPlantsEndpoint.Map(api);
 GetPlantEndpoint.Map(api);
 CreatePlantEndpoint.Map(api);
+GetPlantCompanionsEndpoint.Map(api);
+AddPlantCompanionEndpoint.Map(api);
+RemovePlantCompanionEndpoint.Map(api);
 
 // Plantings
 CreatePlantingEndpoint.Map(api);
@@ -192,3 +201,5 @@ MarkInsightReadEndpoint.Map(api);
 CreateUserInsightEndpoint.Map(api);
 
 app.Run();
+
+public partial class Program { }

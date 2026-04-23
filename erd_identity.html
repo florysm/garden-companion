@@ -46,7 +46,7 @@ const { svg } = await mermaid.render('erd1-svg', `erDiagram
   }
   WeatherStationIntegration {
     guid Id PK
-    guid UserId FK
+    guid HouseholdId FK
     enum Provider
     string StationId
     string ApiKey
@@ -55,7 +55,7 @@ const { svg } = await mermaid.render('erd1-svg', `erDiagram
   User ||--|| UserSettings : "has"
   User ||--o{ HouseholdMember : "belongs to"
   Household ||--o{ HouseholdMember : "has members"
-  User ||--o| WeatherStationIntegration : "has"
+  Household ||--o| WeatherStationIntegration : "has"
 `);
 document.getElementById('erd1').innerHTML = svg;
 </script>

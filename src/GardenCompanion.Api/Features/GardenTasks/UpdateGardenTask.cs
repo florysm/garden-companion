@@ -42,6 +42,9 @@ public class UpdateGardenTaskHandler(AppDbContext db)
         await GardenAccess.RequireMemberAsync(
             db, request.GardenId, request.CurrentUserId, cancellationToken);
 
+        await CreateGardenTaskHandler.ValidateForeignKeysAsync(
+            db, request.GardenId, request.GardenBedId, plantingId: null, request.AssignedToUserId, cancellationToken);
+
         var task = await db.GardenTasks
             .FirstOrDefaultAsync(
                 t => t.Id == request.TaskId && t.GardenId == request.GardenId,

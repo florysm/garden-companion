@@ -13,6 +13,7 @@ export interface LoginRequest {
 
 export interface AuthResponse {
   userId: string
+  householdId: string | null
   email: string
   displayName: string
   accessToken: string

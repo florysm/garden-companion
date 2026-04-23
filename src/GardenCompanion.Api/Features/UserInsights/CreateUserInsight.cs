@@ -4,6 +4,7 @@ using GardenCompanion.Api.Domain.Entities;
 using GardenCompanion.Api.Domain.Enums;
 using GardenCompanion.Api.Infrastructure.Data;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace GardenCompanion.Api.Features.UserInsights;
 
@@ -49,6 +50,22 @@ public class CreateUserInsightHandler(AppDbContext db)
         CreateUserInsightCommand request, CancellationToken cancellationToken)
     {
         await HouseholdAccess.RequireOwnerAsync(db, request.HouseholdId, request.UserId, cancellationToken);
+
+        if (request.GardenId.HasValue)
+        {
+            var gardenBelongsToHousehold = await db.Gardens
+                .AnyAsync(g => g.Id == request.GardenId.Value && g.HouseholdId == request.HouseholdId, cancellationToken);
+            if (!gardenBelongsToHousehold)
+                throw new KeyNotFoundException($"Garden {request.GardenId} not found in household {request.HouseholdId}.");
+        }
+
+        if (request.GardenBedId.HasValue)
+        {
+            var bedBelongsToHousehold = await db.GardenBeds
+                .AnyAsync(b => b.Id == request.GardenBedId.Value && b.Garden.HouseholdId == request.HouseholdId, cancellationToken);
+            if (!bedBelongsToHousehold)
+                throw new KeyNotFoundException($"Garden bed {request.GardenBedId} not found in household {request.HouseholdId}.");
+        }
 
         var insight = new UserInsight
         {

@@ -35,9 +35,10 @@ public class RefreshTokenHandler(AppDbContext db, TokenService tokens)
     public async Task<RefreshTokenResponse> Handle(
         RefreshTokenCommand request, CancellationToken cancellationToken)
     {
+        var hashedToken = TokenService.HashToken(request.Token);
         var existing = await db.UserRefreshTokens
             .Include(t => t.User)
-            .FirstOrDefaultAsync(t => t.Token == request.Token, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Token == hashedToken, cancellationToken);
 
         if (existing is null
             || existing.RevokedAt is not null
@@ -55,7 +56,7 @@ public class RefreshTokenHandler(AppDbContext db, TokenService tokens)
         {
             Id = Guid.NewGuid(),
             UserId = existing.UserId,
-            Token = newRefreshTokenValue,
+            Token = TokenService.HashToken(newRefreshTokenValue),
             ExpiresAt = tokens.RefreshTokenExpiry(),
             CreatedAt = now
         };

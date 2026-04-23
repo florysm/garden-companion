@@ -7,10 +7,9 @@
 import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
 mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { fontSize: '13px' } });
 const { svg } = await mermaid.render('erd4-svg', `erDiagram
-  User {
+  Household {
     guid Id PK
-    string Email
-    string DisplayName
+    string Name
   }
   Garden {
     guid Id PK
@@ -22,7 +21,7 @@ const { svg } = await mermaid.render('erd4-svg', `erDiagram
   }
   WeatherObservation {
     guid Id PK
-    guid UserId FK
+    guid HouseholdId FK
     datetime ObservedAt
     decimal TemperatureF
     decimal Humidity
@@ -38,7 +37,7 @@ const { svg } = await mermaid.render('erd4-svg', `erDiagram
   }
   UserInsight {
     guid Id PK
-    guid UserId FK
+    guid HouseholdId FK
     guid GardenId FK
     guid GardenBedId FK
     enum InsightType
@@ -48,8 +47,8 @@ const { svg } = await mermaid.render('erd4-svg', `erDiagram
     datetime ExpiresAt
     datetime GeneratedAt
   }
-  User ||--o{ WeatherObservation : "records"
-  User ||--o{ UserInsight : "receives"
+  Household ||--o{ WeatherObservation : "records"
+  Household ||--o{ UserInsight : "receives"
   Garden ||--o{ UserInsight : "scoped to"
   GardenBed ||--o{ UserInsight : "scoped to"
 `);

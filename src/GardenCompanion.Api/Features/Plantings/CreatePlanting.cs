@@ -65,7 +65,7 @@ public class CreatePlantingHandler(AppDbContext db)
 
         // Verify plant exists and is accessible
         var plant = await db.Plants
-            .Where(p => p.Id == request.PlantId && ((p.IsGlobal && p.IsApproved) || p.ContributedByUserId != null))
+            .Where(p => p.Id == request.PlantId && ((p.IsGlobal && p.IsApproved) || p.ContributedByUserId == request.UserId))
             .Select(p => new { p.Id, p.CommonName, p.ScientificName, p.Family, p.DaysToMaturity })
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new KeyNotFoundException($"Plant {request.PlantId} not found.");

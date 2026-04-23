@@ -1,0 +1,53 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "API: Debug",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "API: build",
+      "program": "${workspaceFolder}/src/GardenCompanion.Api/bin/Debug/net10.0/GardenCompanion.Api.dll",
+      "cwd": "${workspaceFolder}/src/GardenCompanion.Api",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5012"
+      },
+      "stopAtEntry": false
+    },
+    {
+      "name": "Frontend: Vite",
+      "type": "pwa-node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--host",
+        "localhost"
+      ],
+      "console": "internalConsole",
+      "internalConsoleOptions": "neverOpen",
+      "outputCapture": "std",
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "Local:\\s+(https?://\\S+)",
+        "uriFormat": "%s"
+      },
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack",
+      "configurations": [
+        "API: Debug",
+        "Frontend: Vite"
+      ],
+      "stopAll": true
+    }
+  ]
+}

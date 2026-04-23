@@ -1,0 +1,56 @@
+# OS junk
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor files
+.idea/
+*.suo
+*.user
+*.userosscache
+*.rsuser
+*.sln.docstates
+*.swp
+*.swo
+
+# VS Code
+# Keep the shared workspace/debug configs, ignore local-only settings.
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+
+# Local AI/editor settings
+.claude/settings.local.json
+
+# Frontend dependencies and build output
+node_modules/
+dist/
+dist-ssr/
+coverage/
+.eslintcache
+.vite/
+*.tsbuildinfo
+
+# Local environment files
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# .NET build output
+bin/
+obj/
+TestResults/
+*.trx
+
+# Local SQLite databases
+src/GardenCompanion.Api/*.db
+src/GardenCompanion.Api/*.db-shm
+src/GardenCompanion.Api/*.db-wal

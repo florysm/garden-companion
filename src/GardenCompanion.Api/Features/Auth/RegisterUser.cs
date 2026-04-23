@@ -15,6 +15,7 @@ public record RegisterUserCommand(string Email, string Password, string DisplayN
 
 public record RegisterUserResponse(
     Guid UserId,
+    Guid HouseholdId,
     string Email,
     string DisplayName,
     string AccessToken,
@@ -96,7 +97,7 @@ public class RegisterUserHandler(AppDbContext db, TokenService tokens)
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
-            Token = refreshTokenValue,
+            Token = TokenService.HashToken(refreshTokenValue),
             ExpiresAt = tokens.RefreshTokenExpiry(),
             CreatedAt = now
         };
@@ -106,6 +107,7 @@ public class RegisterUserHandler(AppDbContext db, TokenService tokens)
 
         return new RegisterUserResponse(
             UserId: user.Id,
+            HouseholdId: household.Id,
             Email: user.Email,
             DisplayName: user.DisplayName,
             AccessToken: accessToken,

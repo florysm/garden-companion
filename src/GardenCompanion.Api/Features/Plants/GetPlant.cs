@@ -1,3 +1,4 @@
+using GardenCompanion.Api.Common;
 using GardenCompanion.Api.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +7,7 @@ namespace GardenCompanion.Api.Features.Plants;
 
 // ── Request / Response ───────────────────────────────────────────────────────
 
-public record GetPlantQuery(Guid PlantId) : IRequest<PlantDetailDto>;
+public record GetPlantQuery(Guid PlantId, Guid UserId) : IRequest<PlantDetailDto>;
 
 // ── Handler ──────────────────────────────────────────────────────────────────
 
@@ -17,7 +18,7 @@ public class GetPlantHandler(AppDbContext db)
         GetPlantQuery request, CancellationToken cancellationToken)
     {
         var plant = await db.Plants
-            .Where(p => p.Id == request.PlantId && (p.IsGlobal && p.IsApproved || p.ContributedByUserId != null))
+            .Where(p => p.Id == request.PlantId && ((p.IsGlobal && p.IsApproved) || p.ContributedByUserId == request.UserId))
             .Select(p => new PlantDetailDto(
                 p.Id,
                 p.CommonName,
@@ -51,11 +52,13 @@ public static class GetPlantEndpoint
         app.MapGet("/plants/{id:guid}", async (
             Guid id,
             IMediator mediator,
+            HttpContext ctx,
             CancellationToken ct) =>
         {
             try
             {
-                var result = await mediator.Send(new GetPlantQuery(id), ct);
+                var userId = ctx.User.GetUserId();
+                var result = await mediator.Send(new GetPlantQuery(id, userId), ct);
                 return Results.Ok(result);
             }
             catch (KeyNotFoundException)

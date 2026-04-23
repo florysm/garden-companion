@@ -4,6 +4,7 @@ using GardenCompanion.Api.Domain.Entities;
 using GardenCompanion.Api.Domain.Enums;
 using GardenCompanion.Api.Infrastructure.Data;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace GardenCompanion.Api.Features.GardenTasks;
 
@@ -42,6 +43,8 @@ public class CreateGardenTaskHandler(AppDbContext db)
         await GardenAccess.RequireMemberAsync(
             db, request.GardenId, request.CurrentUserId, cancellationToken);
 
+        await ValidateForeignKeysAsync(db, request.GardenId, request.GardenBedId, request.PlantingId, request.AssignedToUserId, cancellationToken);
+
         var now = DateTime.UtcNow;
 
         var task = new GardenTask
@@ -69,6 +72,33 @@ public class CreateGardenTaskHandler(AppDbContext db)
         }
 
         return ToDto(task, assigneeName);
+    }
+
+    internal static async Task ValidateForeignKeysAsync(
+        AppDbContext db, Guid gardenId, Guid? gardenBedId, Guid? plantingId, Guid? assignedToUserId, CancellationToken ct)
+    {
+        if (gardenBedId.HasValue)
+        {
+            var bedExists = await db.GardenBeds
+                .AnyAsync(b => b.Id == gardenBedId.Value && b.GardenId == gardenId, ct);
+            if (!bedExists)
+                throw new KeyNotFoundException($"Garden bed {gardenBedId} not found in garden {gardenId}.");
+        }
+
+        if (plantingId.HasValue)
+        {
+            var plantingExists = await db.Plantings
+                .AnyAsync(p => p.Id == plantingId.Value && p.GardenBed.GardenId == gardenId, ct);
+            if (!plantingExists)
+                throw new KeyNotFoundException($"Planting {plantingId} not found in garden {gardenId}.");
+        }
+
+        if (assignedToUserId.HasValue)
+        {
+            var role = await GardenAccess.GetRoleAsync(db, gardenId, assignedToUserId.Value, ct);
+            if (role is null)
+                throw new KeyNotFoundException($"User {assignedToUserId} is not a member of garden {gardenId}.");
+        }
     }
 
     internal static GardenTaskDto ToDto(GardenTask t, string? assigneeName)

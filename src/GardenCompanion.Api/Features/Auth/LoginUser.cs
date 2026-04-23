@@ -14,6 +14,7 @@ public record LoginUserCommand(string Email, string Password)
 
 public record LoginUserResponse(
     Guid UserId,
+    Guid? HouseholdId,
     string Email,
     string DisplayName,
     string AccessToken,
@@ -45,6 +46,11 @@ public class LoginUserHandler(AppDbContext db, TokenService tokens)
         if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             throw new UnauthorizedAccessException("Invalid email or password.");
 
+        var householdId = await db.HouseholdMembers
+            .Where(m => m.UserId == user.Id)
+            .Select(m => (Guid?)m.HouseholdId)
+            .FirstOrDefaultAsync(cancellationToken);
+
         var now = DateTime.UtcNow;
         var accessToken = tokens.GenerateAccessToken(user);
         var refreshTokenValue = tokens.GenerateRefreshToken();
@@ -53,7 +59,7 @@ public class LoginUserHandler(AppDbContext db, TokenService tokens)
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
-            Token = refreshTokenValue,
+            Token = TokenService.HashToken(refreshTokenValue),
             ExpiresAt = tokens.RefreshTokenExpiry(),
             CreatedAt = now
         };
@@ -63,6 +69,7 @@ public class LoginUserHandler(AppDbContext db, TokenService tokens)
 
         return new LoginUserResponse(
             UserId: user.Id,
+            HouseholdId: householdId,
             Email: user.Email,
             DisplayName: user.DisplayName,
             AccessToken: accessToken,

@@ -20,6 +20,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getGardenBed, getPlantings, deleteGardenBed, type PlantingSummary } from '../api/gardens'
 import { WeatherStrip } from '../components/layout/WeatherStrip'
 import { ConfirmDeleteDialog } from '../components/layout/ConfirmDeleteDialog'
+import { SoilTestLog } from '../components/beds/SoilTestLog'
+import { AmendmentLog } from '../components/beds/AmendmentLog'
+import { PestDiseaseLog } from '../components/beds/PestDiseaseLog'
 import { useState } from 'react'
 
 function statusChipSx(status: string) {
@@ -230,6 +233,12 @@ export function GardenBedDetailPage() {
                 ))}
               </Grid>
             )}
+
+            <Stack sx={{ gap: 3, mt: 4 }}>
+              <SoilTestLog gardenId={gardenId!} bedId={bedId!} />
+              <AmendmentLog gardenId={gardenId!} bedId={bedId!} />
+              <PestDiseaseLog gardenId={gardenId!} bedId={bedId!} />
+            </Stack>
           </>
         )}
       </Container>

@@ -195,7 +195,7 @@ export function AmendmentLog({ gardenId, bedId }: Props) {
                 size="small"
                 value={productName}
                 onChange={e => setProductName(e.target.value)}
-                inputProps={{ maxLength: 200 }}
+                slotProps={{ htmlInput: { maxLength: 200 } }}
                 sx={{ flex: 2 }}
               />
               <FormControl size="small" sx={{ flex: 1, minWidth: 140 }}>
@@ -222,7 +222,7 @@ export function AmendmentLog({ gardenId, bedId }: Props) {
                 size="small"
                 value={quantity}
                 onChange={e => setQuantity(e.target.value)}
-                inputProps={{ min: 0, step: 'any' }}
+                slotProps={{ htmlInput: { min: 0, step: 'any' } }}
                 sx={{ flex: 1 }}
               />
               <FormControl size="small" sx={{ minWidth: 100 }}>
@@ -241,7 +241,7 @@ export function AmendmentLog({ gardenId, bedId }: Props) {
               maxRows={4}
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              inputProps={{ maxLength: 500 }}
+              slotProps={{ htmlInput: { maxLength: 500 } }}
             />
 
             {mutation.isError && (

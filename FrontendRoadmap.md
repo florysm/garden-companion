@@ -42,9 +42,9 @@ Last updated: 2026-04-23. Prioritized by user impact — higher phases assume lo
 
 > Deepens GardenBedDetailPage from a plantings list into a full bed record.
 
-- [ ] **Soil tests** — `POST /api/gardens/{id}/beds/{bedId}/soil-tests`, `GET` · soil test list + add form on GardenBedDetailPage (pH, N/P/K, test date, notes)
-- [ ] **Amendment logs** — `POST /api/plantings/{id}/amendments`, `GET` · amendment log on PlantingDetailPage or BedDetailPage (amendment type, quantity, date)
-- [ ] **Pest & disease logs** — `POST /api/plantings/{id}/pest-disease`, `GET`, resolve · log + resolve flow on PlantingDetailPage (pest/disease name, severity, treatment, resolved date)
+- [x] **Soil tests** — `POST /api/gardens/{id}/beds/{bedId}/soil-tests`, `GET` · soil test list + add form on GardenBedDetailPage (pH, N/P/K, test date, notes)
+- [x] **Amendment logs** — `POST /api/gardens/{id}/beds/{bedId}/amendments`, `GET` · amendment log on GardenBedDetailPage (amendment type, quantity, date)
+- [x] **Pest & disease logs** — `POST /api/gardens/{id}/beds/{bedId}/pest-disease-logs`, `GET`, resolve · log + resolve flow on GardenBedDetailPage (pest/disease name, severity, treatment, resolved date)
 
 ---
 

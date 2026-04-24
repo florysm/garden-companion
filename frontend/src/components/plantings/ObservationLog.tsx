@@ -188,7 +188,7 @@ export function ObservationLog({ plantingId }: Props) {
               value={note}
               onChange={e => setNote(e.target.value)}
               placeholder="What did you observe?"
-              inputProps={{ maxLength: 2000 }}
+              slotProps={{ htmlInput: { maxLength: 2000 } }}
             />
             {mutation.isError && (
               <Typography variant="caption" color="error">

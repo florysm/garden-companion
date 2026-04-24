@@ -276,7 +276,7 @@ export function PestDiseaseLog({ gardenId, bedId }: Props) {
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder="e.g. Aphids, Powdery mildew"
-                inputProps={{ maxLength: 200 }}
+                slotProps={{ htmlInput: { maxLength: 200 } }}
                 sx={{ flex: 1 }}
               />
             </Stack>
@@ -305,7 +305,7 @@ export function PestDiseaseLog({ gardenId, bedId }: Props) {
               value={treatment}
               onChange={e => setTreatment(e.target.value)}
               placeholder="Optional — what did you use?"
-              inputProps={{ maxLength: 500 }}
+              slotProps={{ htmlInput: { maxLength: 500 } }}
             />
 
             <TextField
@@ -316,7 +316,7 @@ export function PestDiseaseLog({ gardenId, bedId }: Props) {
               maxRows={4}
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              inputProps={{ maxLength: 1000 }}
+              slotProps={{ htmlInput: { maxLength: 1000 } }}
             />
 
             {mutation.isError && (

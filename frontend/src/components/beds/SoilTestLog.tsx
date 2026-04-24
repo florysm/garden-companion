@@ -202,7 +202,7 @@ export function SoilTestLog({ gardenId, bedId }: Props) {
                 size="small"
                 value={ph}
                 onChange={e => setPh(e.target.value)}
-                inputProps={{ min: 0, max: 14, step: 0.1 }}
+                slotProps={{ htmlInput: { min: 0, max: 14, step: 0.1 } }}
                 sx={{ flex: 1 }}
               />
               <TextField
@@ -211,15 +211,15 @@ export function SoilTestLog({ gardenId, bedId }: Props) {
                 size="small"
                 value={organicMatter}
                 onChange={e => setOrganicMatter(e.target.value)}
-                inputProps={{ min: 0, max: 100, step: 0.1 }}
+                slotProps={{ htmlInput: { min: 0, max: 100, step: 0.1 } }}
                 sx={{ flex: 1 }}
               />
             </Stack>
 
             <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2 }}>
-              <TextField label="Nitrogen (ppm)" type="number" size="small" value={nitrogen} onChange={e => setNitrogen(e.target.value)} inputProps={{ min: 0 }} sx={{ flex: 1 }} />
-              <TextField label="Phosphorus (ppm)" type="number" size="small" value={phosphorus} onChange={e => setPhosphorus(e.target.value)} inputProps={{ min: 0 }} sx={{ flex: 1 }} />
-              <TextField label="Potassium (ppm)" type="number" size="small" value={potassium} onChange={e => setPotassium(e.target.value)} inputProps={{ min: 0 }} sx={{ flex: 1 }} />
+              <TextField label="Nitrogen (ppm)" type="number" size="small" value={nitrogen} onChange={e => setNitrogen(e.target.value)} slotProps={{ htmlInput: { min: 0 } }} sx={{ flex: 1 }} />
+              <TextField label="Phosphorus (ppm)" type="number" size="small" value={phosphorus} onChange={e => setPhosphorus(e.target.value)} slotProps={{ htmlInput: { min: 0 } }} sx={{ flex: 1 }} />
+              <TextField label="Potassium (ppm)" type="number" size="small" value={potassium} onChange={e => setPotassium(e.target.value)} slotProps={{ htmlInput: { min: 0 } }} sx={{ flex: 1 }} />
             </Stack>
 
             <TextField
@@ -230,7 +230,7 @@ export function SoilTestLog({ gardenId, bedId }: Props) {
               maxRows={4}
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              inputProps={{ maxLength: 500 }}
+              slotProps={{ htmlInput: { maxLength: 500 } }}
             />
 
             {mutation.isError && (

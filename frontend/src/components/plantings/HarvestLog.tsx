@@ -173,7 +173,7 @@ export function HarvestLog({ plantingId }: Props) {
                 size="small"
                 value={quantity}
                 onChange={e => setQuantity(e.target.value)}
-                inputProps={{ min: 0, step: 'any' }}
+                slotProps={{ htmlInput: { min: 0, step: 'any' } }}
                 sx={{ flex: 1 }}
               />
               <FormControl size="small" sx={{ minWidth: 100 }}>
@@ -198,7 +198,7 @@ export function HarvestLog({ plantingId }: Props) {
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="Optional notes about this harvest"
-              inputProps={{ maxLength: 500 }}
+              slotProps={{ htmlInput: { maxLength: 500 } }}
             />
             {mutation.isError && (
               <Typography variant="caption" color="error">

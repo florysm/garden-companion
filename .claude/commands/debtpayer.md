@@ -1,4 +1,4 @@
-# Garden Companion — Debt Payer
+# Gardenwise — Debt Payer
 
 Address one tech debt item from `TechDebt.md`, run checks, and update the file.
 

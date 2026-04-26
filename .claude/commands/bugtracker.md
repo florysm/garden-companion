@@ -1,4 +1,4 @@
-# Garden Companion — Bug Tracker
+# Gardenwise — Bug Tracker
 
 Scan the codebase for bugs and update `KnownBugs.md`.
 

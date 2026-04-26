@@ -1,4 +1,4 @@
-# Garden Companion — Bug Fixer
+# Gardenwise — Bug Fixer
 
 Fix one bug from `KnownBugs.md`, run tests, and remove the resolved item.
 

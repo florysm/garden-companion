@@ -1,4 +1,4 @@
-# Garden Companion — Code Cleaner
+# Gardenwise — Code Cleaner
 
 Scan the codebase for tech debt and refactoring opportunities, then update `TechDebt.md`.
 

@@ -13,12 +13,12 @@ public class SmtpEmailService(IConfiguration configuration, ILogger<SmtpEmailSer
         var username = smtpSection["Username"];
         var password = smtpSection["Password"];
         var fromEmail = smtpSection["FromEmail"] ?? "noreply@gardencompanion.local";
-        var fromName = smtpSection["FromName"] ?? "Garden Companion";
+        var fromName = smtpSection["FromName"] ?? "Gardenwise";
 
         var body = $"""
             <html>
             <body>
-              <p>You requested a password reset for your Garden Companion account.</p>
+              <p>You requested a password reset for your Gardenwise account.</p>
               <p><a href="{resetLink}">Reset your password</a></p>
               <p>This link expires in 1 hour. If you did not request a reset, ignore this email.</p>
             </body>
@@ -33,7 +33,7 @@ public class SmtpEmailService(IConfiguration configuration, ILogger<SmtpEmailSer
             from: new MailAddress(fromEmail, fromName),
             to: new MailAddress(to))
         {
-            Subject = "Reset your Garden Companion password",
+            Subject = "Reset your Gardenwise password",
             Body = body,
             IsBodyHtml = true
         };

@@ -1,6 +1,6 @@
-# Garden Companion — New Backend Vertical Slice
+# Gardenwise — New Backend Vertical Slice
 
-Create a new vertical slice for the Garden Companion API following the established pattern exactly.
+Create a new vertical slice for the Gardenwise API following the established pattern exactly.
 
 ## Slice anatomy
 

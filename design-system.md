@@ -1,4 +1,4 @@
-# Garden Companion App — Design System
+# Gardenwise App — Design System
 
 ## Product Feel
 A quality gardening journal — not a SaaS dashboard or tech product.

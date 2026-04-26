@@ -1,6 +1,6 @@
-# Garden Companion — Full Project Context
+# Gardenwise — Full Project Context
 
-Garden Companion is a hobby gardening tracker. This skill gives full orientation for any task in the project.
+Gardenwise is a hobby gardening tracker. This skill gives full orientation for any task in the project.
 
 ---
 

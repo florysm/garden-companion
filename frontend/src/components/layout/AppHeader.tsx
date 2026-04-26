@@ -48,7 +48,7 @@ export function AppHeader() {
             variant="h6"
             sx={{ fontFamily: '"Spectral", serif', fontWeight: 600, letterSpacing: 0.3, whiteSpace: 'nowrap' }}
           >
-            {user ? greeting(user.displayName) : 'Garden Companion'}
+            {user ? greeting(user.displayName) : 'Gardenwise'}
           </Typography>
           {weather && (
             <Typography

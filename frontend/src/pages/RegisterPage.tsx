@@ -64,10 +64,10 @@ export function RegisterPage() {
       <Stack sx={{ alignItems: 'center', mb: 4, gap: 1 }}>
         <YardOutlinedIcon sx={{ fontSize: 36, color: 'primary.main' }} />
         <Typography variant="h3" sx={{ color: 'text.primary' }}>
-          Garden Companion
+          Gardenwise
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          A garden journal built for Tuesday evenings.
+          Learn your garden, one season at a time.
         </Typography>
       </Stack>
 

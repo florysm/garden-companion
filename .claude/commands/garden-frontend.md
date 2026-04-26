@@ -1,6 +1,6 @@
-# Garden Companion — Frontend Design System
+# Gardenwise — Frontend Design System
 
-You are building the Garden Companion frontend. Every component you write must conform to this design system exactly.
+You are building the Gardenwise frontend. Every component you write must conform to this design system exactly.
 
 ---
 

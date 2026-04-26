@@ -1,4 +1,4 @@
-# Garden Companion App — Database Schema
+# Gardenwise App — Database Schema
 
 ## Design Principles
 

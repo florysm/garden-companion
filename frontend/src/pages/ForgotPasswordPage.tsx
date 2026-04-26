@@ -43,7 +43,7 @@ export function ForgotPasswordPage() {
       <Stack sx={{ alignItems: 'center', mb: 4, gap: 1 }}>
         <YardOutlinedIcon sx={{ fontSize: 36, color: 'primary.main' }} />
         <Typography variant="h3" sx={{ color: 'text.primary' }}>
-          Garden Companion
+          Gardenwise
         </Typography>
       </Stack>
 

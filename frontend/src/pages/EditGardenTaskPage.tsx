@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import {
   Box,
   Button,
@@ -19,7 +19,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getGarden } from '../api/gardens'
 import { getGardenTask, updateGardenTask } from '../api/tasks'
-import { WeatherStrip } from '../components/layout/WeatherStrip'
+import { AppHeader } from '../components/layout/AppHeader'
 
 const TASK_TYPES = [
   { value: 'Water',     label: 'Water' },
@@ -57,14 +57,16 @@ export function EditGardenTaskPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [initialized, setInitialized] = useState(false)
 
-  if (task && !initialized) {
-    setTitle(task.title)
-    setTaskType(task.taskType)
-    setDueDate(task.dueDate ?? '')
-    setDescription(task.description ?? '')
-    setGardenBedId(task.gardenBedId ?? '')
-    setInitialized(true)
-  }
+  useEffect(() => {
+    if (task && !initialized) {
+      setTitle(task.title)
+      setTaskType(task.taskType)
+      setDueDate(task.dueDate ?? '')
+      setDescription(task.description ?? '')
+      setGardenBedId(task.gardenBedId ?? '')
+      setInitialized(true)
+    }
+  }, [task, initialized])
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -96,7 +98,7 @@ export function EditGardenTaskPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <WeatherStrip />
+      <AppHeader />
       <Container maxWidth="sm" sx={{ py: 4, px: { xs: 2, sm: 3 } }}>
         <Button
           startIcon={<ArrowBackOutlinedIcon />}

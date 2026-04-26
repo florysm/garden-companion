@@ -7,6 +7,7 @@ import {
   CircularProgress,
   Container,
   Divider,
+  IconButton,
   InputAdornment,
   Stack,
   TextField,
@@ -15,16 +16,24 @@ import {
 import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined'
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined'
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import AddOutlinedIcon from '@mui/icons-material/AddOutlined'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createPlanting } from '../api/gardens'
 import { searchPlants, type PlantSummary } from '../api/plants'
-import { WeatherStrip } from '../components/layout/WeatherStrip'
+import { AppHeader } from '../components/layout/AppHeader'
 
 const PLANTING_TYPES = [
   { value: 'Annual', label: 'Annual' },
   { value: 'Perennial', label: 'Perennial' },
   { value: 'Biennial', label: 'Biennial' },
+]
+
+const PLANTING_SOURCES = [
+  { value: 'DirectSeed', label: 'Direct Seed' },
+  { value: 'IndoorSeedStart', label: 'Indoor Start' },
+  { value: 'PurchasedTransplant', label: 'Purchased Transplant' },
 ]
 
 function todayIso() {
@@ -53,27 +62,33 @@ function PlantSearchResult({
   plant: PlantSummary
   onSelect: (p: PlantSummary) => void
 }) {
+  const navigate = useNavigate()
   return (
-    <Box
-      sx={{
-        px: 2,
-        py: 1.5,
-        cursor: 'pointer',
-        borderRadius: 1,
-        '&:hover': { bgcolor: '#E8E5DE' },
-      }}
+    <Stack
+      direction="row"
+      sx={{ alignItems: 'center', gap: 1, px: 2, py: 1.5, cursor: 'pointer', borderRadius: 1, '&:hover': { bgcolor: '#E8E5DE' } }}
       onClick={() => onSelect(plant)}
     >
-      <Typography variant="body1" sx={{ fontStyle: 'italic', fontFamily: '"Spectral", serif' }}>
-        {plant.commonName}
-      </Typography>
-      {plant.scientificName && (
-        <Typography variant="caption" color="text.secondary">
-          {plant.scientificName}
-          {plant.daysToMaturity ? ` · ${plant.daysToMaturity} days to maturity` : ''}
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography variant="body1" sx={{ fontStyle: 'italic', fontFamily: '"Spectral", serif' }}>
+          {plant.commonName}
         </Typography>
-      )}
-    </Box>
+        {plant.scientificName && (
+          <Typography variant="caption" color="text.secondary">
+            {plant.scientificName}
+            {plant.daysToMaturity ? ` · ${plant.daysToMaturity} days to maturity` : ''}
+          </Typography>
+        )}
+      </Box>
+      <IconButton
+        size="small"
+        onClick={e => { e.stopPropagation(); navigate(`/plants/${plant.id}`) }}
+        sx={{ color: 'text.secondary', flexShrink: 0 }}
+        aria-label={`View ${plant.commonName} details`}
+      >
+        <InfoOutlinedIcon sx={{ fontSize: 16 }} />
+      </IconButton>
+    </Stack>
   )
 }
 
@@ -87,6 +102,7 @@ export function CreatePlantingPage() {
   const [plantedDate, setPlantedDate] = useState(todayIso)
   const [quantity, setQuantity] = useState('1')
   const [plantingType, setPlantingType] = useState('Annual')
+  const [source, setSource] = useState('DirectSeed')
   const [overrideHarvest, setOverrideHarvest] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -140,6 +156,7 @@ export function CreatePlantingPage() {
       plantedDate,
       expectedHarvestDate: effectiveHarvestDate,
       plantingType,
+      source: source as import('../api/gardens').PlantingSource,
       quantity: qty,
       seasonYear: null,
       seasonType: null,
@@ -150,7 +167,7 @@ export function CreatePlantingPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <WeatherStrip />
+      <AppHeader />
       <Container maxWidth="sm" sx={{ py: 4, px: { xs: 2, sm: 3 } }}>
         <Button
           startIcon={<ArrowBackOutlinedIcon />}
@@ -217,18 +234,28 @@ export function CreatePlantingPage() {
                       }}
                     />
                     {showResults && (
-                      <Card sx={{ mt: 0.5, p: 0.5, maxHeight: 260, overflowY: 'auto' }}>
-                        {searchResults.length === 0 && !searching && (
-                          <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-                            No plants found.
-                          </Typography>
-                        )}
+                      <Card sx={{ mt: 0.5, p: 0.5, maxHeight: 280, overflowY: 'auto' }}>
                         {searchResults.map((plant, i) => (
                           <Box key={plant.id}>
                             {i > 0 && <Divider />}
                             <PlantSearchResult plant={plant} onSelect={handleSelectPlant} />
                           </Box>
                         ))}
+                        {searchResults.length === 0 && !searching && (
+                          <Stack sx={{ p: 2, gap: 1.5 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              No plants found for "{debouncedSearch}".
+                            </Typography>
+                            <Button
+                              size="small"
+                              startIcon={<AddOutlinedIcon />}
+                              onClick={() => navigate('/plants/new')}
+                              sx={{ alignSelf: 'flex-start', color: 'primary.main', pl: 0 }}
+                            >
+                              Add it as a custom plant
+                            </Button>
+                          </Stack>
+                        )}
                       </Card>
                     )}
                   </Box>
@@ -295,6 +322,32 @@ export function CreatePlantingPage() {
                         key={opt.value}
                         label={opt.label}
                         onClick={() => setPlantingType(opt.value)}
+                        sx={{
+                          bgcolor: selected ? 'primary.main' : 'background.default',
+                          color: selected ? '#fff' : 'text.secondary',
+                          border: '1.5px solid',
+                          borderColor: selected ? 'primary.main' : '#C8C5BE',
+                          fontWeight: selected ? 500 : 400,
+                          '&:hover': { bgcolor: selected ? 'primary.dark' : '#E8E5DE' },
+                        }}
+                      />
+                    )
+                  })}
+                </Stack>
+              </Box>
+
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                  How did you get this plant?
+                </Typography>
+                <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  {PLANTING_SOURCES.map(opt => {
+                    const selected = source === opt.value
+                    return (
+                      <Chip
+                        key={opt.value}
+                        label={opt.label}
+                        onClick={() => setSource(opt.value)}
                         sx={{
                           bgcolor: selected ? 'primary.main' : 'background.default',
                           color: selected ? '#fff' : 'text.secondary',

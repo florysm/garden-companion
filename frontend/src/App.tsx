@@ -16,6 +16,9 @@ import { EditPlantingPage } from './pages/EditPlantingPage'
 import { PlantingDetailPage } from './pages/PlantingDetailPage'
 import { CreateGardenTaskPage } from './pages/CreateGardenTaskPage'
 import { EditGardenTaskPage } from './pages/EditGardenTaskPage'
+import { SettingsPage } from './pages/SettingsPage'
+import { PlantDetailPage } from './pages/PlantDetailPage'
+import { CreatePlantPage } from './pages/CreatePlantPage'
 
 export default function App() {
   return (
@@ -71,6 +74,18 @@ export default function App() {
       <Route
         path="/gardens/:id/plantings/:plantingId/edit"
         element={<AuthGuard><EditPlantingPage /></AuthGuard>}
+      />
+      <Route
+        path="/settings"
+        element={<AuthGuard><SettingsPage /></AuthGuard>}
+      />
+      <Route
+        path="/plants/new"
+        element={<AuthGuard><CreatePlantPage /></AuthGuard>}
+      />
+      <Route
+        path="/plants/:plantId"
+        element={<AuthGuard><PlantDetailPage /></AuthGuard>}
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

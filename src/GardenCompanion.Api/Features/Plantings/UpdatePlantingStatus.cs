@@ -66,6 +66,7 @@ public class UpdatePlantingStatusHandler(AppDbContext db)
             planting.ActualEndDate,
             planting.Status,
             planting.PlantingType,
+            planting.Source,
             planting.Quantity,
             planting.SeasonYear,
             planting.SeasonType,

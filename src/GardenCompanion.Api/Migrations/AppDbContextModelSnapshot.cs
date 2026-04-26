@@ -540,6 +540,9 @@ namespace GardenCompanion.Api.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("HeatLevelShu")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsApproved")
                         .HasColumnType("INTEGER");
 
@@ -644,6 +647,9 @@ namespace GardenCompanion.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int>("SeasonYear")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Source")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Status")

@@ -54,3 +54,4 @@ TestResults/
 src/GardenCompanion.Api/*.db
 src/GardenCompanion.Api/*.db-shm
 src/GardenCompanion.Api/*.db-wal
+.vscode/chrome-debug-profile/

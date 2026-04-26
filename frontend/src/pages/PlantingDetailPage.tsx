@@ -16,7 +16,7 @@ import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getPlanting, updatePlantingStatus, deletePlanting } from '../api/gardens'
-import { WeatherStrip } from '../components/layout/WeatherStrip'
+import { AppHeader } from '../components/layout/AppHeader'
 import { ConfirmDeleteDialog } from '../components/layout/ConfirmDeleteDialog'
 import { ObservationLog } from '../components/plantings/ObservationLog'
 import { HarvestLog } from '../components/plantings/HarvestLog'
@@ -50,6 +50,12 @@ function formatDate(iso: string) {
   })
 }
 
+const SOURCE_LABELS: Record<string, string> = {
+  DirectSeed: 'Direct Seed',
+  IndoorSeedStart: 'Indoor Seed Start',
+  PurchasedTransplant: 'Purchased Transplant',
+}
+
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
     <Box sx={{ flex: 1, bgcolor: 'background.default', borderRadius: 2, p: 2, textAlign: 'center' }}>
@@ -78,6 +84,17 @@ export function PlantingDetailPage() {
 
   const statusMutation = useMutation({
     mutationFn: (status: string) => updatePlantingStatus(plantingId!, status),
+    onMutate: async (newStatus) => {
+      await queryClient.cancelQueries({ queryKey: ['planting', plantingId] })
+      const prev = queryClient.getQueryData(['planting', plantingId])
+      queryClient.setQueryData(['planting', plantingId], (old: typeof planting) =>
+        old ? { ...old, status: newStatus } : old
+      )
+      return { prev }
+    },
+    onError: (_e, _status, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['planting', plantingId], ctx.prev)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['planting', plantingId] })
       queryClient.invalidateQueries({ queryKey: ['plantings', gardenId] })
@@ -102,7 +119,7 @@ export function PlantingDetailPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <WeatherStrip />
+      <AppHeader />
       <Container maxWidth="sm" sx={{ py: 4, px: { xs: 2, sm: 3 } }}>
         <Button
           startIcon={<ArrowBackOutlinedIcon />}
@@ -173,7 +190,11 @@ export function PlantingDetailPage() {
                     <Divider sx={{ my: 1.5 }} />
                     <DetailRow
                       label="Expected harvest"
-                      value={formatDate(planting.expectedHarvestDate)}
+                      value={
+                        planting.source === 'PurchasedTransplant'
+                          ? `${formatDate(planting.expectedHarvestDate)} (estimated)`
+                          : formatDate(planting.expectedHarvestDate)
+                      }
                     />
                   </>
                 )}
@@ -192,6 +213,8 @@ export function PlantingDetailPage() {
                 <DetailRow label="Type" value={planting.plantingType} />
                 <Divider sx={{ my: 1.5 }} />
                 <DetailRow label="Season" value={`${planting.seasonType} ${planting.seasonYear}`} />
+                <Divider sx={{ my: 1.5 }} />
+                <DetailRow label="Source" value={SOURCE_LABELS[planting.source] ?? planting.source} />
                 <Divider sx={{ my: 1.5 }} />
                 <DetailRow label="Bed" value={planting.gardenBedName} />
               </Stack>

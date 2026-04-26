@@ -1,7 +1,19 @@
+using GardenCompanion.Api.Infrastructure.ExternalData;
+
 namespace GardenCompanion.Api.Tests.Features.Plantings;
 
 public class CreatePlantingHandlerTests
 {
+    // Minimal fake — these tests only exercise local plant creation
+    private sealed class FakePlantDataService : IPlantDataService
+    {
+        public Task<List<ExternalPlantResult>> SearchAsync(string query, CancellationToken ct) =>
+            Task.FromResult<List<ExternalPlantResult>>([]);
+
+        public Task<ExternalPlantResult?> GetAsync(string externalId, CancellationToken ct) =>
+            Task.FromResult<ExternalPlantResult?>(null);
+    }
+
     [Fact]
     public async Task Handle_CreatesPlantingAndDerivesExpectedHarvestDate()
     {
@@ -19,18 +31,21 @@ public class CreatePlantingHandlerTests
         db.AddRange(user, household, householdMember, garden, gardenMember, bed, plant);
         await db.SaveChangesAsync();
 
-        var handler = new CreatePlantingHandler(db);
+        var handler = new CreatePlantingHandler(db, new FakePlantDataService());
         var plantedDate = new DateOnly(2026, 4, 18);
 
         var result = await handler.Handle(
             new CreatePlantingCommand(
-                garden.Id,
-                user.Id,
-                bed.Id,
-                plant.Id,
-                plantedDate,
+                GardenId: garden.Id,
+                UserId: user.Id,
+                GardenBedId: bed.Id,
+                PlantId: plant.Id,
+                ExternalPlantId: null,
+                ExternalPlantSource: null,
+                PlantedDate: plantedDate,
                 ExpectedHarvestDate: null,
-                PlantingType.Annual,
+                PlantingType: PlantingType.Annual,
+                Source: PlantingSource.DirectSeed,
                 Quantity: 6,
                 SeasonYear: null,
                 SeasonType: null),
@@ -66,20 +81,23 @@ public class CreatePlantingHandlerTests
         db.AddRange(owner, requestingUser, household, householdOwner, garden, bed, plant);
         await db.SaveChangesAsync();
 
-        var handler = new CreatePlantingHandler(db);
+        var handler = new CreatePlantingHandler(db, new FakePlantDataService());
 
         var act = () => handler.Handle(
             new CreatePlantingCommand(
-                garden.Id,
-                requestingUser.Id,
-                bed.Id,
-                plant.Id,
-                new DateOnly(2026, 4, 18),
-                null,
-                PlantingType.Annual,
-                3,
-                null,
-                null),
+                GardenId: garden.Id,
+                UserId: requestingUser.Id,
+                GardenBedId: bed.Id,
+                PlantId: plant.Id,
+                ExternalPlantId: null,
+                ExternalPlantSource: null,
+                PlantedDate: new DateOnly(2026, 4, 18),
+                ExpectedHarvestDate: null,
+                PlantingType: PlantingType.Annual,
+                Source: PlantingSource.DirectSeed,
+                Quantity: 3,
+                SeasonYear: null,
+                SeasonType: null),
             CancellationToken.None);
 
         await act.Should().ThrowAsync<KeyNotFoundException>()
@@ -112,20 +130,23 @@ public class CreatePlantingHandlerTests
             plant);
         await db.SaveChangesAsync();
 
-        var handler = new CreatePlantingHandler(db);
+        var handler = new CreatePlantingHandler(db, new FakePlantDataService());
 
         var act = () => handler.Handle(
             new CreatePlantingCommand(
-                accessibleGarden.Id,
-                user.Id,
-                otherBed.Id,
-                plant.Id,
-                new DateOnly(2026, 4, 18),
-                null,
-                PlantingType.Annual,
-                3,
-                null,
-                null),
+                GardenId: accessibleGarden.Id,
+                UserId: user.Id,
+                GardenBedId: otherBed.Id,
+                PlantId: plant.Id,
+                ExternalPlantId: null,
+                ExternalPlantSource: null,
+                PlantedDate: new DateOnly(2026, 4, 18),
+                ExpectedHarvestDate: null,
+                PlantingType: PlantingType.Annual,
+                Source: PlantingSource.DirectSeed,
+                Quantity: 3,
+                SeasonYear: null,
+                SeasonType: null),
             CancellationToken.None);
 
         await act.Should().ThrowAsync<KeyNotFoundException>()

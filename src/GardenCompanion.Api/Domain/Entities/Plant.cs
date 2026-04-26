@@ -14,6 +14,7 @@ public class Plant
     public string? ScientificName { get; set; }
     public string? Description { get; set; }
     public int? DaysToMaturity { get; set; }
+    public int? HeatLevelShu { get; set; }
     public decimal? MinSpacingInches { get; set; }
     public string? SunRequirement { get; set; }
     public string? WaterRequirement { get; set; }

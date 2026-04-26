@@ -180,7 +180,7 @@ export function PestDiseaseLog({ gardenId, bedId }: Props) {
         type,
         name: name.trim(),
         severity,
-        observedAt: observedAt ? new Date(observedAt).toISOString() : undefined,
+        observedAt: observedAt ? new Date(observedAt + 'T00:00:00').toISOString() : undefined,
         treatmentApplied: treatment.trim() || undefined,
         notes: notes.trim() || undefined,
       }),

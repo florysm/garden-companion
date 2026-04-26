@@ -14,7 +14,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createGarden, getGardenTypes } from '../api/gardens'
 import { useAuth } from '../contexts/AuthContext'
-import { WeatherStrip } from '../components/layout/WeatherStrip'
+import { AppHeader } from '../components/layout/AppHeader'
 
 export function CreateGardenPage() {
   const navigate = useNavigate()
@@ -61,9 +61,37 @@ export function CreateGardenPage() {
     })
   }
 
+  if (!user?.householdId) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+        <AppHeader />
+        <Container maxWidth="sm" sx={{ py: 4, px: { xs: 2, sm: 3 } }}>
+          <Button
+            startIcon={<ArrowBackOutlinedIcon />}
+            onClick={() => navigate('/')}
+            sx={{ mb: 3, color: 'text.secondary', pl: 0 }}
+          >
+            Back to dashboard
+          </Button>
+          <Card sx={{ p: 4, textAlign: 'center' }}>
+            <Typography variant="h5" sx={{ mb: 2 }}>
+              No household yet
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              You need to set up a household before creating a garden. Head to Settings to create one.
+            </Typography>
+            <Button variant="contained" color="secondary" onClick={() => navigate('/settings')}>
+              Go to Settings
+            </Button>
+          </Card>
+        </Container>
+      </Box>
+    )
+  }
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <WeatherStrip />
+      <AppHeader />
       <Container maxWidth="sm" sx={{ py: 4, px: { xs: 2, sm: 3 } }}>
         <Button
           startIcon={<ArrowBackOutlinedIcon />}

@@ -9,6 +9,7 @@ import {
   Typography,
 } from '@mui/material'
 import YardOutlinedIcon from '@mui/icons-material/YardOutlined'
+import axios from 'axios'
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -30,8 +31,12 @@ export function LoginPage() {
     try {
       await login(email, password)
       navigate(from, { replace: true })
-    } catch {
-      setError('Invalid email or password.')
+    } catch (err) {
+      if (axios.isAxiosError(err) && !err.response) {
+        setError('Unable to reach the API. Check that the debug session is still running.')
+      } else {
+        setError('Invalid email or password.')
+      }
     } finally {
       setLoading(false)
     }

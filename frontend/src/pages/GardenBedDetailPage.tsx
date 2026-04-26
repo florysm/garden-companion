@@ -18,7 +18,7 @@ import YardOutlinedIcon from '@mui/icons-material/YardOutlined'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getGardenBed, getPlantings, deleteGardenBed, type PlantingSummary } from '../api/gardens'
-import { WeatherStrip } from '../components/layout/WeatherStrip'
+import { AppHeader } from '../components/layout/AppHeader'
 import { ConfirmDeleteDialog } from '../components/layout/ConfirmDeleteDialog'
 import { SoilTestLog } from '../components/beds/SoilTestLog'
 import { AmendmentLog } from '../components/beds/AmendmentLog'
@@ -147,7 +147,7 @@ export function GardenBedDetailPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <WeatherStrip />
+      <AppHeader />
       <Container maxWidth="lg" sx={{ py: 4, px: { xs: 2, sm: 3 } }}>
         <Button
           startIcon={<ArrowBackOutlinedIcon />}

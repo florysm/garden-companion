@@ -16,7 +16,7 @@ import { getGardens } from '../api/gardens'
 import { getInsights, markInsightRead, type UserInsight } from '../api/insights'
 import { GardenCard } from '../components/gardens/GardenCard'
 import { InsightChip } from '../components/insights/InsightChip'
-import { WeatherStrip } from '../components/layout/WeatherStrip'
+import { AppHeader } from '../components/layout/AppHeader'
 import { useAuth } from '../contexts/AuthContext'
 
 function GardenGridSkeleton() {
@@ -133,7 +133,7 @@ export function DashboardPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <WeatherStrip />
+      <AppHeader />
 
       <Container maxWidth="lg" sx={{ py: 4, px: { xs: 2, sm: 3 } }}>
         <Stack

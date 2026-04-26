@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import {
   Box,
   Button,
@@ -14,7 +14,7 @@ import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getGarden, getGardenTypes, updateGarden } from '../api/gardens'
-import { WeatherStrip } from '../components/layout/WeatherStrip'
+import { AppHeader } from '../components/layout/AppHeader'
 
 export function EditGardenPage() {
   const { id } = useParams<{ id: string }>()
@@ -38,15 +38,17 @@ export function EditGardenPage() {
   const [nameError, setNameError] = useState('')
   const [initialized, setInitialized] = useState(false)
 
-  if (garden && gardenTypes.length > 0 && !initialized) {
-    setName(garden.name)
-    setDescription(garden.description ?? '')
-    const matchedIds = gardenTypes
-      .filter(t => garden.types.includes(t.name))
-      .map(t => t.id)
-    setSelectedTypeIds(matchedIds)
-    setInitialized(true)
-  }
+  useEffect(() => {
+    if (garden && gardenTypes.length > 0 && !initialized) {
+      setName(garden.name)
+      setDescription(garden.description ?? '')
+      const matchedIds = gardenTypes
+        .filter(t => garden.types.includes(t.name))
+        .map(t => t.id)
+      setSelectedTypeIds(matchedIds)
+      setInitialized(true)
+    }
+  }, [garden, gardenTypes, initialized])
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -80,7 +82,7 @@ export function EditGardenPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <WeatherStrip />
+      <AppHeader />
       <Container maxWidth="sm" sx={{ py: 4, px: { xs: 2, sm: 3 } }}>
         <Button
           startIcon={<ArrowBackOutlinedIcon />}

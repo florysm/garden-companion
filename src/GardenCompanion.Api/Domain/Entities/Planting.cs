@@ -12,6 +12,7 @@ public class Planting
     public DateOnly? ActualEndDate { get; set; }
     public PlantingStatus Status { get; set; } = PlantingStatus.Planted;
     public PlantingType PlantingType { get; set; } = PlantingType.Annual;
+    public PlantingSource Source { get; set; } = PlantingSource.DirectSeed;
     public int Quantity { get; set; } = 1;
     public int SeasonYear { get; set; }
     public SeasonType SeasonType { get; set; }

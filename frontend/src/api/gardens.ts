@@ -97,6 +97,8 @@ export const getGardenBed = (gardenId: string, bedId: string): Promise<GardenBed
 export const createGardenBed = (gardenId: string, body: CreateGardenBedBody): Promise<GardenBedDetail> =>
   apiClient.post<GardenBedDetail>(`/api/gardens/${gardenId}/beds`, body).then(r => r.data)
 
+export type PlantingSource = 'DirectSeed' | 'IndoorSeedStart' | 'PurchasedTransplant'
+
 export interface PlantingSummary {
   id: string
   gardenBedId: string
@@ -108,6 +110,7 @@ export interface PlantingSummary {
   actualEndDate: string | null
   status: string
   plantingType: string
+  source: PlantingSource
   quantity: number
   seasonYear: number
   seasonType: string
@@ -128,6 +131,7 @@ export interface CreatePlantingBody {
   plantedDate: string
   expectedHarvestDate: string | null
   plantingType: string
+  source: PlantingSource
   quantity: number
   seasonYear: number | null
   seasonType: string | null
@@ -188,6 +192,7 @@ export const deleteGardenBed = (gardenId: string, bedId: string): Promise<void> 
 export interface UpdatePlantingBody {
   expectedHarvestDate: string | null
   plantingType: string
+  source: PlantingSource
   quantity: number
   seasonYear: number
   seasonType: string
@@ -353,3 +358,11 @@ export const logPestDisease = (gardenId: string, bedId: string, body: LogPestDis
 
 export const resolvePestDiseaseLog = (gardenId: string, bedId: string, logId: string): Promise<PestDiseaseLog> =>
   apiClient.patch<PestDiseaseLog>(`/api/gardens/${gardenId}/beds/${bedId}/pest-disease-logs/${logId}/resolve`, {}).then(r => r.data)
+
+// ── Garden members ────────────────────────────────────────────────────────────
+
+export const addGardenMember = (gardenId: string, email: string): Promise<GardenMember> =>
+  apiClient.post<GardenMember>(`/api/gardens/${gardenId}/members`, { email }).then(r => r.data)
+
+export const removeGardenMember = (gardenId: string, userId: string): Promise<void> =>
+  apiClient.delete(`/api/gardens/${gardenId}/members/${userId}`).then(() => undefined)

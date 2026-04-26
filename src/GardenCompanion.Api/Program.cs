@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text;
 using System.Text.Json.Serialization;
 using FluentValidation;
@@ -20,6 +21,7 @@ using GardenCompanion.Api.Features.Plants;
 using GardenCompanion.Api.Features.SoilTests;
 using GardenCompanion.Api.Infrastructure.Data;
 using GardenCompanion.Api.Infrastructure.Email;
+using GardenCompanion.Api.Infrastructure.ExternalData;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -73,12 +75,20 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 // ── Email ─────────────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
+// ── External plant data ───────────────────────────────────────────────────────
+builder.Services.AddHttpClient<IPlantDataService, ScrapedPlantDataService>(client =>
+{
+    client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (compatible; GardenCompanion/1.0)");
+    client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/json");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
+
 // ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
-        policy.WithOrigins(
-                builder.Configuration["App:FrontendUrl"] ?? "http://localhost:5173")
+        policy.SetIsOriginAllowed(origin =>
+                IsAllowedFrontendOrigin(origin, builder.Configuration, builder.Environment))
             .AllowAnyHeader()
             .AllowAnyMethod());
 });
@@ -94,6 +104,7 @@ if (app.Environment.IsDevelopment())
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
+    await PlantSeeder.SeedAsync(db);
     app.MapOpenApi();
 }
 
@@ -119,6 +130,7 @@ GetMySettingsEndpoint.Map(api);
 UpdateMySettingsEndpoint.Map(api);
 
 // Households
+CreateHouseholdEndpoint.Map(api);
 GetHouseholdEndpoint.Map(api);
 UpdateHouseholdEndpoint.Map(api);
 AddHouseholdMemberEndpoint.Map(api);
@@ -201,5 +213,62 @@ MarkInsightReadEndpoint.Map(api);
 CreateUserInsightEndpoint.Map(api);
 
 app.Run();
+
+static bool IsAllowedFrontendOrigin(string? origin, IConfiguration configuration, IWebHostEnvironment environment)
+{
+    if (string.IsNullOrWhiteSpace(origin) || !Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+    {
+        return false;
+    }
+
+    var configuredOrigins = configuration.GetSection("App:AllowedFrontendOrigins")
+        .GetChildren()
+        .Select(origin => origin.Value)
+        .Where(origin => !string.IsNullOrWhiteSpace(origin))
+        .ToArray();
+
+    if (configuredOrigins.Length == 0)
+    {
+        configuredOrigins = [configuration["App:FrontendUrl"] ?? "http://localhost:5173"];
+    }
+
+    if (configuredOrigins.Any(allowed =>
+            string.Equals(allowed?.TrimEnd('/'), origin.TrimEnd('/'), StringComparison.OrdinalIgnoreCase)))
+    {
+        return true;
+    }
+
+    if (!environment.IsDevelopment() || uri.Scheme != Uri.UriSchemeHttp || uri.Port != 5173)
+    {
+        return false;
+    }
+
+    if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+    {
+        return true;
+    }
+
+    if (uri.Host.EndsWith(".local", StringComparison.OrdinalIgnoreCase))
+    {
+        return true;
+    }
+
+    return IPAddress.TryParse(uri.Host, out var address) && IsPrivateOrLoopbackAddress(address);
+}
+
+static bool IsPrivateOrLoopbackAddress(IPAddress address)
+{
+    if (IPAddress.IsLoopback(address))
+    {
+        return true;
+    }
+
+    var bytes = address.GetAddressBytes();
+
+    return address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork
+        && (bytes[0] == 10
+            || (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31)
+            || (bytes[0] == 192 && bytes[1] == 168));
+}
 
 public partial class Program { }

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import {
   Box,
   Button,
@@ -15,7 +15,7 @@ import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getGardenBed, updateGardenBed } from '../api/gardens'
-import { WeatherStrip } from '../components/layout/WeatherStrip'
+import { AppHeader } from '../components/layout/AppHeader'
 
 const BED_TYPES = [
   { value: 'InGround', label: 'In Ground' },
@@ -119,20 +119,22 @@ export function EditGardenBedPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [initialized, setInitialized] = useState(false)
 
-  if (bed && !initialized) {
-    setName(bed.name)
-    setType(bed.type)
-    setShape(bed.shape)
-    setSunExposure(bed.sunExposure)
-    setLengthFeet(bed.lengthFeet?.toString() ?? '')
-    setWidthFeet(bed.widthFeet?.toString() ?? '')
-    setDiameterFeet(bed.diameterFeet?.toString() ?? '')
-    setDepthInches(bed.depthInches?.toString() ?? '')
-    setVolumeGallons(bed.volumeGallons?.toString() ?? '')
-    setSoilType(bed.soilType ?? '')
-    setNotes(bed.notes ?? '')
-    setInitialized(true)
-  }
+  useEffect(() => {
+    if (bed && !initialized) {
+      setName(bed.name)
+      setType(bed.type)
+      setShape(bed.shape)
+      setSunExposure(bed.sunExposure)
+      setLengthFeet(bed.lengthFeet?.toString() ?? '')
+      setWidthFeet(bed.widthFeet?.toString() ?? '')
+      setDiameterFeet(bed.diameterFeet?.toString() ?? '')
+      setDepthInches(bed.depthInches?.toString() ?? '')
+      setVolumeGallons(bed.volumeGallons?.toString() ?? '')
+      setSoilType(bed.soilType ?? '')
+      setNotes(bed.notes ?? '')
+      setInitialized(true)
+    }
+  }, [bed, initialized])
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -181,7 +183,7 @@ export function EditGardenBedPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <WeatherStrip />
+      <AppHeader />
       <Container maxWidth="sm" sx={{ py: 4, px: { xs: 2, sm: 3 } }}>
         <Button
           startIcon={<ArrowBackOutlinedIcon />}

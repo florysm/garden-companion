@@ -1,7 +1,8 @@
 using GardenCompanion.Api.Common;
+using GardenCompanion.Api.Domain.Enums;
 using GardenCompanion.Api.Infrastructure.Data;
+using GardenCompanion.Api.Infrastructure.ExternalData;
 using MediatR;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
 namespace GardenCompanion.Api.Features.Plants;
@@ -13,16 +14,47 @@ public record SearchPlantsQuery(Guid UserId, string? Q, string? Family, bool? Is
 
 // ── Handler ──────────────────────────────────────────────────────────────────
 
-public class SearchPlantsHandler(AppDbContext db)
+public class SearchPlantsHandler(AppDbContext db, IPlantDataService plantDataService, ILogger<SearchPlantsHandler> logger)
     : IRequestHandler<SearchPlantsQuery, List<PlantSummaryDto>>
 {
+    // Fall back to scraper when a text search returns fewer than this many local results.
+    private const int FallbackThreshold = 3;
+
     public async Task<List<PlantSummaryDto>> Handle(
         SearchPlantsQuery request, CancellationToken cancellationToken)
     {
-        var query = db.Plants.AsQueryable();
+        var localResults = await RunLocalQueryAsync(request, cancellationToken);
 
-        // Return approved global plants or plants contributed by the requesting user
-        query = query.Where(p => (p.IsGlobal && p.IsApproved) || p.ContributedByUserId == request.UserId);
+        if (ShouldFallback(request, localResults))
+        {
+            var externalResults = await FetchExternalResultsAsync(request.Q!, cancellationToken);
+
+            // Only include external hits not already represented in local results.
+            var localExternalIds = localResults
+                .Where(p => p.ExternalId != null)
+                .Select(p => p.ExternalId!)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var ext in externalResults)
+            {
+                if (!localExternalIds.Contains(ext.ExternalId))
+                    localResults.Add(ToSummaryDto(ext));
+            }
+        }
+
+        return localResults;
+    }
+
+    private static bool ShouldFallback(SearchPlantsQuery request, List<PlantSummaryDto> results)
+        => !string.IsNullOrWhiteSpace(request.Q)
+            && request.IsGlobal != false
+            && results.Count < FallbackThreshold;
+
+    private async Task<List<PlantSummaryDto>> RunLocalQueryAsync(
+        SearchPlantsQuery request, CancellationToken ct)
+    {
+        var query = db.Plants
+            .Where(p => (p.IsGlobal && p.IsApproved) || p.ContributedByUserId == request.UserId);
 
         if (!string.IsNullOrWhiteSpace(request.Q))
         {
@@ -50,9 +82,31 @@ public class SearchPlantsHandler(AppDbContext db)
                 p.DaysToMaturity,
                 p.IsGlobal,
                 p.IsApproved,
-                p.ExternalSource))
-            .ToListAsync(cancellationToken);
+                p.ExternalSource,
+                p.ExternalId))
+            .ToListAsync(ct);
     }
+
+    private async Task<List<ExternalPlantResult>> FetchExternalResultsAsync(string q, CancellationToken ct)
+    {
+        try { return await plantDataService.SearchAsync(q, ct); }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Plant data scraping failed for query '{Query}' — falling back to local results", q);
+            return [];
+        }
+    }
+
+    private static PlantSummaryDto ToSummaryDto(ExternalPlantResult ext) => new(
+        Guid.Empty,
+        ext.CommonName,
+        ext.ScientificName,
+        ext.Family,
+        ext.DaysToMaturity,
+        IsGlobal: true,
+        IsApproved: false,
+        ExternalSource: ExternalSource.Scraped,
+        ExternalId: ext.ExternalId);
 }
 
 // ── Endpoint ─────────────────────────────────────────────────────────────────

@@ -72,6 +72,7 @@ public class GetPlantingsHandler(AppDbContext db)
                 p.ActualEndDate,
                 p.Status,
                 p.PlantingType,
+                p.Source,
                 p.Quantity,
                 p.SeasonYear,
                 p.SeasonType,

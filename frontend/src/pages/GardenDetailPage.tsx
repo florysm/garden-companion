@@ -9,6 +9,7 @@ import {
   IconButton,
   Skeleton,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material'
 import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined'
@@ -27,12 +28,16 @@ import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined'
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getGarden, deleteGarden, type GardenBedSummary } from '../api/gardens'
+import { getGarden, deleteGarden, addGardenMember, removeGardenMember, type GardenBedSummary, type GardenMember } from '../api/gardens'
 import { getGardenTasks, completeGardenTask, deleteGardenTask, type GardenTask } from '../api/tasks'
-import { WeatherStrip } from '../components/layout/WeatherStrip'
+import { AppHeader } from '../components/layout/AppHeader'
 import { ConfirmDeleteDialog } from '../components/layout/ConfirmDeleteDialog'
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import type { SvgIconComponent } from '@mui/icons-material'
+import { useAuth } from '../contexts/AuthContext'
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined'
+import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined'
+import Alert from '@mui/material/Alert'
 
 // ── Task type display config ──────────────────────────────────────────────────
 
@@ -208,7 +213,7 @@ function TasksSection({ gardenId, beds }: { gardenId: string; beds: GardenBedSum
     onError: (_e, _id, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(queryKey, ctx.prev)
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['tasks', gardenId] }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey }),
   })
 
   const deleteMutation = useMutation({
@@ -222,7 +227,7 @@ function TasksSection({ gardenId, beds }: { gardenId: string; beds: GardenBedSum
     onError: (_e, _id, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(queryKey, ctx.prev)
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['tasks', gardenId] }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey }),
   })
 
   const filterChipSx = (active: boolean) => ({
@@ -331,6 +336,123 @@ function TasksSection({ gardenId, beds }: { gardenId: string; beds: GardenBedSum
   )
 }
 
+// ── Members section ───────────────────────────────────────────────────────────
+
+function MembersSection({ gardenId, members, isOwner }: { gardenId: string; members: GardenMember[]; isOwner: boolean }) {
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteError, setInviteError] = useState('')
+
+  const inviteMutation = useMutation({
+    mutationFn: (email: string) => addGardenMember(gardenId, email),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['garden', gardenId] })
+      setInviteEmail('')
+      setInviteError('')
+    },
+    onError: () => {
+      setInviteEmail('')
+      setInviteError('Could not add this member. Make sure the email is correct and they have an account.')
+    },
+  })
+
+  const removeMutation = useMutation({
+    mutationFn: (userId: string) => removeGardenMember(gardenId, userId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['garden', gardenId] }),
+  })
+
+  function handleInvite(e: FormEvent) {
+    e.preventDefault()
+    const trimmed = inviteEmail.trim()
+    if (!trimmed) return
+    setInviteError('')
+    inviteMutation.mutate(trimmed)
+  }
+
+  return (
+    <Box sx={{ mt: 5 }}>
+      <Stack direction="row" sx={{ alignItems: 'center', mb: 2, gap: 1 }}>
+        <GroupsOutlinedIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
+        <Typography variant="h5">Members</Typography>
+      </Stack>
+
+      <Card sx={{ p: 0, overflow: 'hidden' }}>
+        {members.map((member, idx) => (
+          <Box key={member.userId}>
+            {idx > 0 && <Divider />}
+            <Stack direction="row" sx={{ alignItems: 'center', px: 2.5, py: 1.5, gap: 1.5 }}>
+              <Box
+                sx={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  bgcolor: 'primary.main', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}
+              >
+                <Typography variant="caption" sx={{ color: '#fff', fontWeight: 600 }}>
+                  {member.displayName[0].toUpperCase()}
+                </Typography>
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="body2">{member.displayName}</Typography>
+              </Box>
+              <Chip
+                label={member.role}
+                size="small"
+                sx={{ fontSize: '0.7rem', bgcolor: 'background.default' }}
+              />
+              {isOwner && member.userId !== user?.userId && (
+                <IconButton
+                  size="small"
+                  onClick={() => removeMutation.mutate(member.userId)}
+                  disabled={removeMutation.isPending}
+                  sx={{ color: 'text.secondary' }}
+                  aria-label={`Remove ${member.displayName}`}
+                >
+                  <DeleteOutlineOutlinedIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+              )}
+            </Stack>
+          </Box>
+        ))}
+      </Card>
+
+      {isOwner && (
+        <Box sx={{ mt: 2 }}>
+          <form onSubmit={handleInvite} noValidate>
+            <Stack direction="row" sx={{ gap: 1.5, alignItems: 'flex-start' }}>
+              <TextField
+                label="Invite by email"
+                type="email"
+                value={inviteEmail}
+                onChange={e => { setInviteEmail(e.target.value); setInviteError('') }}
+                size="small"
+                sx={{ flex: 1 }}
+              />
+              <Button
+                type="submit"
+                variant="outlined"
+                color="primary"
+                size="small"
+                disabled={inviteMutation.isPending || !inviteEmail.trim()}
+                startIcon={<PersonAddOutlinedIcon />}
+                sx={{ mt: 0.5, flexShrink: 0 }}
+              >
+                {inviteMutation.isPending ? 'Inviting…' : 'Invite'}
+              </Button>
+            </Stack>
+            {inviteError && (
+              <Alert severity="error" sx={{ mt: 1.5, py: 0.5 }}>
+                {inviteError}
+              </Alert>
+            )}
+          </form>
+        </Box>
+      )}
+    </Box>
+  )
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export function GardenDetailPage() {
@@ -358,7 +480,7 @@ export function GardenDetailPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <WeatherStrip />
+      <AppHeader />
       <Container maxWidth="lg" sx={{ py: 4, px: { xs: 2, sm: 3 } }}>
         <Button
           startIcon={<ArrowBackOutlinedIcon />}
@@ -451,6 +573,13 @@ export function GardenDetailPage() {
 
             {/* Tasks */}
             <TasksSection gardenId={id!} beds={garden.beds} />
+
+            {/* Members */}
+            <MembersSection
+              gardenId={id!}
+              members={garden.members}
+              isOwner={isOwner}
+            />
           </>
         )}
       </Container>

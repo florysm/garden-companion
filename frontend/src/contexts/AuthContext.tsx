@@ -14,6 +14,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string, displayName: string) => Promise<void>
   logout: () => void
+  updateUser: (updates: Partial<Pick<AuthUser, 'displayName' | 'householdId'>>) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -72,8 +73,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }, [])
 
+  const updateUser = useCallback((updates: Partial<Pick<AuthUser, 'displayName' | 'householdId'>>) => {
+    if (updates.displayName) localStorage.setItem('displayName', updates.displayName)
+    if ('householdId' in updates) {
+      if (updates.householdId) {
+        localStorage.setItem('householdId', updates.householdId)
+      } else {
+        localStorage.removeItem('householdId')
+      }
+    }
+    setUser(prev => prev ? { ...prev, ...updates } : prev)
+  }, [])
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: user !== null, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: user !== null, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   )

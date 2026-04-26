@@ -5,5 +5,6 @@ public enum ExternalSource
     Perenual,
     OpenFarm,
     Trefle,
-    Manual
+    Manual,
+    Scraped
 }

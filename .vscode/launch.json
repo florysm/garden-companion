@@ -12,6 +12,21 @@
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_URLS": "http://localhost:5012"
       },
+      "postDebugTask": "Dev: stop app ports",
+      "stopAtEntry": false
+    },
+    {
+      "name": "API: Debug (Network)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "API: build",
+      "program": "${workspaceFolder}/src/GardenCompanion.Api/bin/Debug/net10.0/GardenCompanion.Api.dll",
+      "cwd": "${workspaceFolder}/src/GardenCompanion.Api",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://0.0.0.0:5012"
+      },
+      "postDebugTask": "Dev: stop app ports",
       "stopAtEntry": false
     },
     {
@@ -19,25 +34,62 @@
       "type": "pwa-node",
       "request": "launch",
       "cwd": "${workspaceFolder}/frontend",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev",
-        "--",
+      "runtimeExecutable": "node",
+      "program": "${workspaceFolder}/frontend/node_modules/vite/bin/vite.js",
+      "args": [
         "--host",
         "localhost"
       ],
+      "killBehavior": "forceful",
+      "postDebugTask": "Dev: stop app ports",
       "console": "internalConsole",
       "internalConsoleOptions": "neverOpen",
       "outputCapture": "std",
-      "serverReadyAction": {
-        "action": "openExternally",
-        "pattern": "Local:\\s+(https?://\\S+)",
-        "uriFormat": "%s"
-      },
       "skipFiles": [
         "<node_internals>/**"
       ]
+    },
+    {
+      "name": "Frontend: Vite (Network)",
+      "type": "pwa-node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/frontend",
+      "runtimeExecutable": "node",
+      "program": "${workspaceFolder}/frontend/node_modules/vite/bin/vite.js",
+      "args": [
+        "--host",
+        "0.0.0.0"
+      ],
+      "killBehavior": "forceful",
+      "postDebugTask": "Dev: stop app ports",
+      "console": "internalConsole",
+      "internalConsoleOptions": "neverOpen",
+      "outputCapture": "std",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "name": "Browser: Frontend",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "preLaunchTask": "Browser: pre-launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/frontend/src",
+      "userDataDir": "${workspaceFolder}/.vscode/chrome-debug-profile",
+      "cleanUp": "wholeBrowser",
+      "postDebugTask": "Dev: stop app ports"
+    },
+    {
+      "name": "Browser: Frontend (Network)",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "preLaunchTask": "Browser: pre-launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/frontend/src",
+      "userDataDir": "${workspaceFolder}/.vscode/chrome-debug-profile",
+      "cleanUp": "wholeBrowser",
+      "postDebugTask": "Dev: stop app ports"
     }
   ],
   "compounds": [
@@ -45,7 +97,17 @@
       "name": "Full Stack",
       "configurations": [
         "API: Debug",
-        "Frontend: Vite"
+        "Frontend: Vite",
+        "Browser: Frontend"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "Full Stack (Network)",
+      "configurations": [
+        "API: Debug (Network)",
+        "Frontend: Vite (Network)",
+        "Browser: Frontend (Network)"
       ],
       "stopAll": true
     }

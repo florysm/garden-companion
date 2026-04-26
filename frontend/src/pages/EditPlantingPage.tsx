@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import {
   Box,
   Button,
@@ -14,12 +14,18 @@ import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getPlanting, updatePlanting } from '../api/gardens'
-import { WeatherStrip } from '../components/layout/WeatherStrip'
+import { AppHeader } from '../components/layout/AppHeader'
 
 const PLANTING_TYPES = [
   { value: 'Annual', label: 'Annual' },
   { value: 'Perennial', label: 'Perennial' },
   { value: 'Biennial', label: 'Biennial' },
+]
+
+const PLANTING_SOURCES = [
+  { value: 'DirectSeed', label: 'Direct Seed' },
+  { value: 'IndoorSeedStart', label: 'Indoor Start' },
+  { value: 'PurchasedTransplant', label: 'Purchased Transplant' },
 ]
 
 const SEASON_TYPES = [
@@ -83,26 +89,31 @@ export function EditPlantingPage() {
 
   const [expectedHarvestDate, setExpectedHarvestDate] = useState('')
   const [plantingType, setPlantingType] = useState('Annual')
+  const [source, setSource] = useState('DirectSeed')
   const [quantity, setQuantity] = useState('1')
   const [seasonYear, setSeasonYear] = useState('')
   const [seasonType, setSeasonType] = useState('Spring')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [initialized, setInitialized] = useState(false)
 
-  if (planting && !initialized) {
-    setExpectedHarvestDate(planting.expectedHarvestDate ?? '')
-    setPlantingType(planting.plantingType)
-    setQuantity(planting.quantity.toString())
-    setSeasonYear(planting.seasonYear.toString())
-    setSeasonType(planting.seasonType)
-    setInitialized(true)
-  }
+  useEffect(() => {
+    if (planting && !initialized) {
+      setExpectedHarvestDate(planting.expectedHarvestDate ?? '')
+      setPlantingType(planting.plantingType)
+      setSource(planting.source)
+      setQuantity(planting.quantity.toString())
+      setSeasonYear(planting.seasonYear.toString())
+      setSeasonType(planting.seasonType)
+      setInitialized(true)
+    }
+  }, [planting, initialized])
 
   const mutation = useMutation({
     mutationFn: () =>
       updatePlanting(plantingId!, {
         expectedHarvestDate: expectedHarvestDate || null,
         plantingType,
+        source: source as import('../api/gardens').PlantingSource,
         quantity: parseInt(quantity, 10),
         seasonYear: parseInt(seasonYear, 10) || new Date().getFullYear(),
         seasonType,
@@ -129,7 +140,7 @@ export function EditPlantingPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <WeatherStrip />
+      <AppHeader />
       <Container maxWidth="sm" sx={{ py: 4, px: { xs: 2, sm: 3 } }}>
         <Button
           startIcon={<ArrowBackOutlinedIcon />}
@@ -198,6 +209,13 @@ export function EditPlantingPage() {
                   options={PLANTING_TYPES}
                   value={plantingType}
                   onChange={setPlantingType}
+                />
+
+                <ChipGroup
+                  label="How did you get this plant?"
+                  options={PLANTING_SOURCES}
+                  value={source}
+                  onChange={setSource}
                 />
 
                 <TextField

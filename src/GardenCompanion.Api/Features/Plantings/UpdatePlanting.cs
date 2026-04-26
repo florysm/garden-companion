@@ -14,6 +14,7 @@ public record UpdatePlantingCommand(
     Guid UserId,
     DateOnly? ExpectedHarvestDate,
     PlantingType PlantingType,
+    PlantingSource Source,
     int Quantity,
     int SeasonYear,
     SeasonType SeasonType) : IRequest<PlantingDetailDto>;
@@ -23,6 +24,7 @@ public record UpdatePlantingCommand(
 public record UpdatePlantingBody(
     DateOnly? ExpectedHarvestDate,
     PlantingType PlantingType,
+    PlantingSource Source,
     int Quantity,
     int SeasonYear,
     SeasonType SeasonType);
@@ -54,6 +56,7 @@ public class UpdatePlantingHandler(AppDbContext db)
 
         planting.ExpectedHarvestDate = request.ExpectedHarvestDate;
         planting.PlantingType = request.PlantingType;
+        planting.Source = request.Source;
         planting.Quantity = request.Quantity;
         planting.SeasonYear = request.SeasonYear;
         planting.SeasonType = request.SeasonType;
@@ -76,6 +79,7 @@ public class UpdatePlantingHandler(AppDbContext db)
                 p.ActualEndDate,
                 p.Status,
                 p.PlantingType,
+                p.Source,
                 p.Quantity,
                 p.SeasonYear,
                 p.SeasonType,
@@ -107,7 +111,7 @@ public static class UpdatePlantingEndpoint
             var userId = ctx.User.GetUserId();
             var command = new UpdatePlantingCommand(
                 id, userId, body.ExpectedHarvestDate, body.PlantingType,
-                body.Quantity, body.SeasonYear, body.SeasonType);
+                body.Source, body.Quantity, body.SeasonYear, body.SeasonType);
 
             try
             {

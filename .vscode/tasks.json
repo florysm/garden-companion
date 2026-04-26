@@ -11,6 +11,42 @@
       ],
       "group": "build",
       "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Dev: stop app ports",
+      "type": "shell",
+      "command": "for port in 5012 5173; do lsof -ti tcp:$port -sTCP:LISTEN | xargs kill 2>/dev/null || true; done; pkill -f 'chrome-debug-profile' 2>/dev/null || true",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "never",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Dev: kill chrome debug",
+      "type": "shell",
+      "command": "pkill -f 'chrome-debug-profile' 2>/dev/null; sleep 0.5; true",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "never",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Frontend: wait for Vite",
+      "type": "shell",
+      "command": "until curl -sf http://localhost:5173 >/dev/null; do sleep 0.2; done",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "never",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Browser: pre-launch",
+      "dependsOn": ["Dev: kill chrome debug", "Frontend: wait for Vite"],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
     }
   ]
 }

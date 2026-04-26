@@ -10,7 +10,8 @@ public record PlantSummaryDto(
     int? DaysToMaturity,
     bool IsGlobal,
     bool IsApproved,
-    ExternalSource ExternalSource);
+    ExternalSource ExternalSource,
+    string? ExternalId);
 
 public record PlantDetailDto(
     Guid Id,
@@ -19,6 +20,7 @@ public record PlantDetailDto(
     string? Description,
     string? Family,
     int? DaysToMaturity,
+    int? HeatLevelShu,
     decimal? MinSpacingInches,
     decimal? MinDepthInches,
     string? SunRequirement,

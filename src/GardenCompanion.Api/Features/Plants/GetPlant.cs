@@ -26,6 +26,7 @@ public class GetPlantHandler(AppDbContext db)
                 p.Description,
                 p.Family,
                 p.DaysToMaturity,
+                p.HeatLevelShu,
                 p.MinSpacingInches,
                 p.MinDepthInches,
                 p.SunRequirement,

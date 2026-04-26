@@ -2,6 +2,8 @@
 
 Last updated: 2026-04-25. Prioritized by impact on maintainability. Fix opportunistically alongside whichever feature touches the relevant file.
 
+<!-- Scan run 2026-04-25: 0 new items, 1 resolved (frontend #10 submit buttons), several scope counts updated -->
+
 ---
 
 ## Architecture Decisions
@@ -35,9 +37,9 @@ POST /api/plantings  { externalPlantId: "...", externalSource: "Scraped" }
 
 **1. Standardize error response bodies**
 
-`KeyNotFoundException` is caught inconsistently across 42 endpoints:
-- Some return `Results.NotFound(new { error = ex.Message })` — includes detail
-- Others return `Results.NotFound()` — no detail
+`KeyNotFoundException` is caught inconsistently across 41 endpoints:
+- 30 return bare `Results.NotFound()` — no detail (mostly GET/DELETE operations)
+- 11 return `Results.NotFound(new { error = ex.Message })` — includes detail (mostly POST/PUT operations)
 
 Convention to adopt: always include `new { error = ex.Message }`. This makes client error handling predictable and avoids silent 404s that are hard to debug.
 
@@ -47,24 +49,23 @@ Affected endpoints: all `catch (KeyNotFoundException)` blocks across `Features/`
 
 **2. Extract `PlantingDetailDto` projection**
 
-The same 77-line LINQ `Select` projection is copy-pasted in three handlers:
+The same LINQ `Select` projection is copy-pasted in two handlers:
 - [GetPlanting.cs](src/GardenCompanion.Api/Features/Plantings/GetPlanting.cs)
 - [UpdatePlanting.cs](src/GardenCompanion.Api/Features/Plantings/UpdatePlanting.cs)
-- [CreatePlanting.cs](src/GardenCompanion.Api/Features/Plantings/CreatePlanting.cs)
 
-Extract to a `static IQueryable<PlantingDetailDto> ProjectToDetail(this IQueryable<Planting> query)` extension method in [PlantingDtos.cs](src/GardenCompanion.Api/Features/Plantings/PlantingDtos.cs). Any change to the DTO currently requires updating three files.
+`CreatePlanting.cs` constructs the same DTO via manual property assignment rather than a reusable Select, so any DTO change requires updating three files in total.
+
+Extract to a `static IQueryable<PlantingDetailDto> ProjectToDetail(this IQueryable<Planting> query)` extension method in [PlantingDtos.cs](src/GardenCompanion.Api/Features/Plantings/PlantingDtos.cs).
 
 ---
 
 **3. Add pagination to list endpoints**
 
-Only `GetHarvestLogs` implements a `limit` parameter. These endpoints have no pagination and will degrade on large datasets:
-- `GetPlantings` — no limit
+`GetHarvestLogs`, `GetPlantings`, `GetPestDiseaseLogs`, and `GetAmendmentLogs` now have `limit` parameters. These two still return unbounded results:
 - `GetGardenTasks` — no limit
 - `GetUserInsights` — no limit
-- `GetPestDiseaseLogs` — no limit
 
-Add a shared `PagedRequest` (skip, take) and `PagedResponse<T>` (items, totalCount) in `Common/` and wire up the above handlers. Default page size: 50.
+Add a shared `PagedRequest` (skip, take) and `PagedResponse<T>` (items, totalCount) in `Common/` and wire up the remaining handlers. Default page size: 50.
 
 ---
 
@@ -81,11 +82,14 @@ Some features embed DTOs inline in the handler file; others use a dedicated `[Fe
 
 **5. Centralize enum validation**
 
-Four endpoints manually parse enums before FluentValidation runs:
+Seven endpoints manually parse enums before FluentValidation runs:
 - [CreateGardenBed.cs](src/GardenCompanion.Api/Features/GardenBeds/CreateGardenBed.cs)
-- [CreateGardenTask.cs](src/GardenCompanion.Api/Features/GardenTasks/CreateGardenTask.cs)
-- [GetGardenTasks.cs](src/GardenCompanion.Api/Features/GardenTasks/GetGardenTasks.cs)
 - [UpdateGardenBed.cs](src/GardenCompanion.Api/Features/GardenBeds/UpdateGardenBed.cs)
+- [CreateGardenTask.cs](src/GardenCompanion.Api/Features/GardenTasks/CreateGardenTask.cs)
+- [UpdateGardenTask.cs](src/GardenCompanion.Api/Features/GardenTasks/UpdateGardenTask.cs)
+- [GetGardenTasks.cs](src/GardenCompanion.Api/Features/GardenTasks/GetGardenTasks.cs)
+- [AddGardenMember.cs](src/GardenCompanion.Api/Features/GardenMembers/AddGardenMember.cs)
+- [CreateSoilTest.cs](src/GardenCompanion.Api/Features/SoilTests/CreateSoilTest.cs)
 
 Move into FluentValidation rules (`.Must(v => Enum.TryParse<T>(v, true, out _)).WithMessage(...)`) so validation is uniform and consistent with all other field validation.
 
@@ -101,7 +105,7 @@ Some handlers return `Results.Forbid()`, others `Results.Problem(ex.Message, sta
 
 **7. Authorization chain repetition**
 
-20+ handlers repeat the same `GardenAccess.Require*Async` call pattern at the top of `Handle()`. The pattern itself is fine — `GardenAccess` is already a shared helper. Worth noting if the number of features grows significantly; a base handler class could centralize this.
+33 handlers repeat the same `GardenAccess.Require*Async` call pattern at the top of `Handle()`. The pattern itself is fine — `GardenAccess` is already a shared helper. Worth noting if the number of features grows significantly; a base handler class could centralize this.
 
 ---
 
@@ -111,7 +115,7 @@ Some handlers return `Results.Forbid()`, others `Results.Problem(ex.Message, sta
 
 **1. `formatDate` + date helpers duplicated**
 
-`formatDate` (with inconsistent `month: 'short'` vs `month: 'long'`) is copy-pasted across 9 files. `today()` / `todayIso()` are defined in 4 separate files.
+`formatDate` (with inconsistent `month: 'short'` vs `month: 'long'`) is copy-pasted across 8 files. `today()` / `todayIso()` are defined in 5 separate files.
 
 Extract all to `src/utils/dateUtils.ts`:
 ```ts
@@ -119,7 +123,7 @@ export function formatDate(iso: string): string { ... }
 export function todayIso(): string { ... }
 ```
 
-Affected: `GardenDetailPage`, `GardenBedDetailPage`, `PlantingDetailPage`, `EditPlantingPage`, `AmendmentLog`, `PestDiseaseLog`, `SoilTestLog`, `HarvestLog`, `ObservationLog`, `CreatePlantingPage`
+Affected: `GardenBedDetailPage`, `PlantingDetailPage`, `AmendmentLog`, `PestDiseaseLog`, `SoilTestLog`, `HarvestLog`, `ObservationLog`, `CreatePlantingPage`
 
 ---
 
@@ -160,7 +164,15 @@ Defined at `CreatePlantingPage.tsx:49`. Move to `src/hooks/useDebounce.ts` befor
 
 **7. `initialized` form seeding pattern**
 
-`EditGardenPage.tsx:41`, `EditPlantingPage.tsx:99`, `EditGardenTaskPage.tsx:60` use a manual `initialized` flag to one-time seed form state from async data. Goes stale if query refetches. Refactor: remove the flag and call a `reset(data)` inside `useEffect` whenever the query result changes identity.
+Five components use a manual `initialized` / `nameInitialized` flag to one-time seed form state from async data. Goes stale if the query refetches with new data.
+
+- `EditGardenPage.tsx:41`
+- `EditPlantingPage.tsx:99`
+- `EditGardenTaskPage.tsx:60`
+- `SettingsPage.tsx:50` (ProfileSection `nameInitialized`)
+- `SettingsPage.tsx:241` (HouseholdSection `nameInitialized`)
+
+Refactor: remove the flag and call a `reset(data)` inside `useEffect` whenever the query result changes identity.
 
 ---
 
@@ -176,19 +188,15 @@ Defined at `CreatePlantingPage.tsx:49`. Move to `src/hooks/useDebounce.ts` befor
 
 Mutation `onError` callbacks currently do nothing or show inline text inconsistently. Add an MUI `Snackbar` provider in `App.tsx` and a `useErrorToast` hook for consistent failure feedback.
 
-**10. Submit buttons not disabled during in-flight mutations**
+**10. Query key naming inconsistency**
 
-All 11 create/edit pages allow double-submit. Add `disabled={mutation.isPending}` to submit buttons.
+Mix of singular/plural keys (`['garden', id]` vs `['gardens']`) and naming styles (`['pestDisease', ...]` camelCase vs `['amendments', ...]` lowercase) means some invalidations may miss related caches. Audit and standardize; consider a `queryKeys` factory object.
 
-**11. Query key naming inconsistency**
-
-Mix of singular/plural keys (`['garden', id]` vs `['gardens']`) means some invalidations miss related caches. Audit and standardize; consider a `queryKeys` factory object.
-
-**12. No React error boundary**
+**11. No React error boundary**
 
 Unhandled component exceptions crash the entire app to a blank white screen. Add an `<ErrorBoundary>` wrapper in `App.tsx`.
 
-**13. No 404 page**
+**12. No 404 page**
 
 Unknown routes silently redirect to `/` with no user feedback. Add a `NotFoundPage` and point the catch-all `path="*"` route to it.
 

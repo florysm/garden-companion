@@ -21,6 +21,9 @@ public class PlantConfiguration : IEntityTypeConfiguration<Plant>
         builder.Property(p => p.WaterRequirement).HasMaxLength(100);
         builder.Property(p => p.MinDepthInches).HasColumnType("decimal(6,2)");
         builder.Property(p => p.Family).HasMaxLength(100);
+        builder.Property(p => p.FruitSizeDescription).HasMaxLength(200);
+        builder.Property(p => p.DiseaseResistanceNotes).HasMaxLength(500);
+        builder.Property(p => p.Aliases).HasMaxLength(500);
 
         builder.HasIndex(p => p.ExternalSource).HasDatabaseName("IX_Plants_ExternalSource");
         builder.HasIndex(p => p.CommonName).HasDatabaseName("IX_Plants_CommonName");

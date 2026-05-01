@@ -22,4 +22,7 @@ public record ExternalPlantResult(
     int? HeatLevelShu,
     string? WaterRequirement,
     decimal? MinDepthInches,
-    string? Family);
+    string? Family,
+    string? FruitSizeDescription = null,
+    string? DiseaseResistanceNotes = null,
+    string? Aliases = null);

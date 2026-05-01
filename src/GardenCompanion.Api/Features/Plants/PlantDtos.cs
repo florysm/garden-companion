@@ -11,7 +11,8 @@ public record PlantSummaryDto(
     bool IsGlobal,
     bool IsApproved,
     ExternalSource ExternalSource,
-    string? ExternalId);
+    string? ExternalId,
+    string? Aliases = null);
 
 public record PlantDetailDto(
     Guid Id,
@@ -30,4 +31,7 @@ public record PlantDetailDto(
     ExternalSource ExternalSource,
     string? ExternalId,
     Guid? ContributedByUserId,
-    DateTime? CachedAt);
+    DateTime? CachedAt,
+    string? FruitSizeDescription = null,
+    string? DiseaseResistanceNotes = null,
+    string? Aliases = null);

@@ -10,14 +10,64 @@ public partial class ScrapedPlantDataService(HttpClient httpClient, ILogger<Scra
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
 
+    // Maps alias names → canonical cultivar name used in _cultivarSourceMap lookups and local DB search.
+    private static readonly Dictionary<string, string> _aliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Bananarama"]                = "Sweet Banana Whopper",
+        ["Burpee Sweet Bananarama"]   = "Sweet Banana Whopper",
+        ["Cubanelle"]                 = "Sweet Chili Pepper",
+        ["Hungarian Wax"]             = "Hot Banana Pepper",
+        ["Hot Banana Hungarian Wax"]  = "Hot Banana Pepper",
+        ["Marconi Red"]               = "Marconi Pepper",
+        ["Giant Marconi"]             = "Marconi Pepper",
+    };
+
+    // Maps canonical cultivar name → ordered list of (sourcePrefix, querySlug) to try via GetAsync.
+    // The querySlug is passed as the ID portion of the ExternalId (e.g. "burpee:cajun-belle-pepper").
+    private static readonly Dictionary<string, List<(string Source, string Slug)>> _cultivarSourceMap
+        = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Cajun Belle"]                    = [("burpee", "cajun-belle-pepper"), ("almanac", "cajun-belle-pepper")],
+        ["Jaloro Pepper"]                  = [("chilipeppermadness", "jaloro-chili-peppers"), ("almanac", "jaloro-pepper")],
+        ["Sweet Banana Whopper"]           = [("burpee", "sweet-banana-whopper-pepper"), ("almanac", "sweet-banana-pepper")],
+        ["Giant Ristra Chili Pepper"]      = [("almanac", "ristra-chili-pepper"), ("chilipeppermadness", "ristra-chili-peppers")],
+        ["Sweet Chili Pepper"]             = [("almanac", "cubanelle-pepper"), ("chilipeppermadness", "cubanelle-peppers")],
+        ["Compadre Pepper"]                = [("almanac", "compadre-pepper")],
+        ["Red Knight Pepper"]              = [("almanac", "red-knight-pepper")],
+        ["Keystone Resistant Giant Pepper"]= [("almanac", "keystone-resistant-giant-pepper")],
+        ["Marconi Pepper"]                 = [("almanac", "marconi-pepper"), ("chilipeppermadness", "marconi-peppers")],
+        ["Golden Marconi Pepper"]          = [("almanac", "golden-marconi-pepper")],
+        ["Hot Banana Pepper"]              = [("almanac", "hot-banana-pepper"), ("chilipeppermadness", "banana-peppers")],
+        ["Yellow Bell Pepper"]             = [("almanac", "yellow-bell-pepper")],
+        ["Orange Bell Pepper"]             = [("almanac", "orange-bell-pepper")],
+        ["Burpless Bush Cucumber"]         = [("almanac", "burpless-bush-cucumber")],
+        ["Homemade Pickles Cucumber"]      = [("almanac", "homemade-pickles-cucumber"), ("holmesseed", "homemade-pickles-cucumber")],
+        ["Early Bell Pepper"]              = [("almanac", "bell-pepper")],
+    };
+
     public async Task<List<ExternalPlantResult>> SearchAsync(string query, CancellationToken ct)
     {
         try
         {
-            var result = await TryAlmanacAsync(query, ct)
-                      ?? await TryHolmesSeedAsync(query, ct)
-                      ?? await TryChiliPepperMadnessAsync(query, ct)
-                      ?? await TryWikipediaAsync(query, ct);
+            // Resolve alias → canonical name before any scraping attempt.
+            var resolvedQuery = _aliases.TryGetValue(query.Trim(), out var canonical) ? canonical : query;
+
+            // Check cultivar source map first — try each designated source in order.
+            if (_cultivarSourceMap.TryGetValue(resolvedQuery.Trim(), out var sources))
+            {
+                foreach (var (source, slug) in sources)
+                {
+                    var cultivarResult = await GetAsync($"{source}:{slug}", ct);
+                    if (cultivarResult is not null)
+                        return [cultivarResult];
+                }
+            }
+
+            // Generic fallback chain for everything else.
+            var result = await TryAlmanacAsync(resolvedQuery, ct)
+                      ?? await TryHolmesSeedAsync(resolvedQuery, ct)
+                      ?? await TryChiliPepperMadnessAsync(resolvedQuery, ct)
+                      ?? await TryWikipediaAsync(resolvedQuery, ct);
 
             return result is null ? [] : [result];
         }
@@ -40,11 +90,14 @@ public partial class ScrapedPlantDataService(HttpClient httpClient, ILogger<Scra
         {
             return source switch
             {
-                "almanac" => await FetchAlmanacBySlugAsync(id, ct),
-                "holmesseed" => await FetchHolmesSeedBySlugAsync(id, ct),
+                "almanac"            => await FetchAlmanacBySlugAsync(id, ct),
+                "holmesseed"         => await FetchHolmesSeedBySlugAsync(id, ct),
                 "chilipeppermadness" => await TryChiliPepperMadnessAsync(id.Replace('-', ' '), ct),
-                "wiki" => await TryWikipediaAsync(id.Replace('_', ' '), ct),
-                _ => null
+                "wiki"               => await TryWikipediaAsync(id.Replace('_', ' '), ct),
+                "burpee"             => await TryBurpeeAsync(id.Replace('-', ' '), ct),
+                "trueleaf"           => await TryTrueLeafMarketAsync(id.Replace('-', ' '), ct),
+                "botanical"          => await TryBotanicalInterestsAsync(id.Replace('-', ' '), ct),
+                _                    => null
             };
         }
         catch (Exception ex)
@@ -407,6 +460,285 @@ public partial class ScrapedPlantDataService(HttpClient httpClient, ILogger<Scra
     [GeneratedRegex(@"\s*[-–]\s*(all about them|guide|overview|profile|info|information|facts).*$",
         RegexOptions.IgnoreCase)]
     private static partial Regex SuffixStripRegex();
+
+    // ── Burpee ────────────────────────────────────────────────────────────────
+
+    private async Task<ExternalPlantResult?> TryBurpeeAsync(string query, CancellationToken ct)
+    {
+        try
+        {
+            var searchUrl = $"https://www.burpee.com/search?q={Uri.EscapeDataString(query)}&view=list";
+            var html = await FetchHtmlAsync(searchUrl, ct);
+            if (html is null) return null;
+
+            var context = BrowsingContext.New(Configuration.Default);
+            using var searchDoc = await context.OpenAsync(req => req.Content(html), ct);
+
+            // Find the first product link — Burpee product URLs contain "prod" and are under burpee.com
+            var productUrl = searchDoc.QuerySelectorAll("a[href]")
+                .Select(a => a.GetAttribute("href"))
+                .FirstOrDefault(href =>
+                    href != null &&
+                    href.Contains("burpee.com/", StringComparison.OrdinalIgnoreCase) &&
+                    (href.Contains("prod") || href.Contains("/vegetables/") || href.Contains("/flowers/")) &&
+                    !href.Contains("/search"));
+
+            if (productUrl is null) return null;
+
+            var productHtml = await FetchHtmlAsync(productUrl, ct);
+            if (productHtml is null) return null;
+
+            return await ParseBurpeeDetailAsync(productUrl, productHtml, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Burpee scrape failed for '{Query}'", query);
+            return null;
+        }
+    }
+
+    private static async Task<ExternalPlantResult?> ParseBurpeeDetailAsync(
+        string url, string html, CancellationToken ct)
+    {
+        var context = BrowsingContext.New(Configuration.Default);
+        using var doc = await context.OpenAsync(req => req.Content(html), ct);
+
+        var heading = doc.QuerySelector("h1")?.TextContent?.Trim();
+        if (string.IsNullOrWhiteSpace(heading)) return null;
+
+        // Burpee Quick Guide: try <dt>/<dd> pairs and <li> label:value patterns
+        var data = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var dts = doc.QuerySelectorAll("dt");
+        foreach (var dt in dts)
+        {
+            var label = dt.TextContent.Trim();
+            var value = (dt.NextElementSibling is IElement dd && dd.TagName == "DD")
+                ? dd.TextContent.Trim() : null;
+            if (!string.IsNullOrWhiteSpace(label) && !string.IsNullOrWhiteSpace(value))
+                data.TryAdd(label, value);
+        }
+
+        // Also try table rows
+        var tds = doc.QuerySelectorAll("td");
+        for (var i = 0; i + 1 < tds.Length; i += 2)
+        {
+            var label = tds[i].TextContent.Trim();
+            var value = tds[i + 1].TextContent.Trim();
+            if (!string.IsNullOrWhiteSpace(label) && !string.IsNullOrWhiteSpace(value))
+                data.TryAdd(label, value);
+        }
+
+        var description = doc.QuerySelectorAll(".product-description p, .product-detail p, main p")
+            .Select(p => p.TextContent.Trim())
+            .FirstOrDefault(t => t.Length > 60);
+
+        var bodyText = string.Join(" ", doc.QuerySelectorAll("main p, .product-description p")
+            .Select(p => p.TextContent.Trim())
+            .Where(t => t.Length > 0));
+
+        var slug = Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            ? uri.AbsolutePath.Trim('/').Replace('/', '-')
+            : heading.ToLowerInvariant().Replace(' ', '-');
+
+        return new ExternalPlantResult(
+            ExternalId: "burpee:" + slug,
+            CommonName: heading,
+            ScientificName: ExtractScientificNameFromText(bodyText.Length > 600 ? bodyText[..600] : bodyText),
+            Description: description is null ? null : Truncate(description, 1800),
+            MinSpacingInches: ParseFirstNumber(GetValue(data, "Spacing", "Plant Spacing", "Space Between Plants")),
+            SunRequirement: Sanitize(GetValue(data, "Sun", "Sun Exposure", "Light")),
+            DaysToMaturity: ParseFirstInt(GetValue(data, "Days to Maturity", "Maturity", "Days to Harvest"))
+                ?? ParseDaysToMaturityFromText(bodyText),
+            HeatLevelShu: ParseShuFromText(bodyText),
+            WaterRequirement: Sanitize(GetValue(data, "Water", "Water Needs", "Watering")),
+            MinDepthInches: ParseDepth(GetValue(data, "Planting Depth", "Depth", "Plant Depth")),
+            Family: null,
+            FruitSizeDescription: Sanitize(GetValue(data, "Fruit Size", "Size", "Average Fruit Size")));
+    }
+
+    // ── True Leaf Market ──────────────────────────────────────────────────────
+
+    private async Task<ExternalPlantResult?> TryTrueLeafMarketAsync(string query, CancellationToken ct)
+    {
+        try
+        {
+            var searchUrl = $"https://www.trueleafmarket.com/search?type=product&q={Uri.EscapeDataString(query)}";
+            var html = await FetchHtmlAsync(searchUrl, ct);
+            if (html is null) return null;
+
+            var context = BrowsingContext.New(Configuration.Default);
+            using var searchDoc = await context.OpenAsync(req => req.Content(html), ct);
+
+            var productUrl = searchDoc.QuerySelectorAll("a[href]")
+                .Select(a => a.GetAttribute("href"))
+                .FirstOrDefault(href =>
+                    href != null &&
+                    href.Contains("trueleafmarket.com/products/", StringComparison.OrdinalIgnoreCase));
+
+            if (productUrl is null) return null;
+
+            var productHtml = await FetchHtmlAsync(productUrl, ct);
+            if (productHtml is null) return null;
+
+            return await ParseTrueLeafMarketDetailAsync(productUrl, productHtml, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "True Leaf Market scrape failed for '{Query}'", query);
+            return null;
+        }
+    }
+
+    private static async Task<ExternalPlantResult?> ParseTrueLeafMarketDetailAsync(
+        string url, string html, CancellationToken ct)
+    {
+        var context = BrowsingContext.New(Configuration.Default);
+        using var doc = await context.OpenAsync(req => req.Content(html), ct);
+
+        var heading = doc.QuerySelector("h1")?.TextContent?.Trim();
+        if (string.IsNullOrWhiteSpace(heading)) return null;
+
+        var data = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        // True Leaf Market uses <li> items with "Label: Value" format in spec sections
+        foreach (var li in doc.QuerySelectorAll("li"))
+        {
+            var text = li.TextContent.Trim();
+            var colonIdx = text.IndexOf(':');
+            if (colonIdx > 0 && colonIdx < 40)
+            {
+                var label = text[..colonIdx].Trim();
+                var value = text[(colonIdx + 1)..].Trim();
+                if (!string.IsNullOrWhiteSpace(label) && !string.IsNullOrWhiteSpace(value))
+                    data.TryAdd(label, value);
+            }
+        }
+
+        // Also try <strong>Label:</strong> pairs
+        foreach (var strong in doc.QuerySelectorAll("strong"))
+        {
+            var labelWithColon = strong.TextContent.Trim();
+            var label = labelWithColon.TrimEnd(':');
+            var parent = strong.ParentElement;
+            if (parent is null) continue;
+            var fullText = parent.TextContent.Trim();
+            var value = fullText.StartsWith(labelWithColon, StringComparison.Ordinal)
+                ? fullText[labelWithColon.Length..].Trim() : null;
+            if (!string.IsNullOrWhiteSpace(label) && !string.IsNullOrWhiteSpace(value))
+                data.TryAdd(label, value);
+        }
+
+        var description = doc.QuerySelectorAll(".product-description p, .rte p, main p")
+            .Select(p => p.TextContent.Trim())
+            .FirstOrDefault(t => t.Length > 60);
+
+        var bodyText = string.Join(" ", doc.QuerySelectorAll("main p, .product-description p, .rte p")
+            .Select(p => p.TextContent.Trim())
+            .Where(t => t.Length > 0));
+
+        var slug = Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            ? uri.AbsolutePath.Trim('/').Replace('/', '-')
+            : heading.ToLowerInvariant().Replace(' ', '-');
+
+        return new ExternalPlantResult(
+            ExternalId: "trueleaf:" + slug,
+            CommonName: heading,
+            ScientificName: ExtractScientificNameFromText(bodyText.Length > 600 ? bodyText[..600] : bodyText),
+            Description: description is null ? null : Truncate(description, 1800),
+            MinSpacingInches: ParseFirstNumber(GetValue(data, "Spacing", "Plant Spacing", "Space")),
+            SunRequirement: Sanitize(GetValue(data, "Sun", "Sun Exposure", "Light Requirements")),
+            DaysToMaturity: ParseFirstInt(GetValue(data, "Days to Maturity", "Maturity", "Days"))
+                ?? ParseDaysToMaturityFromText(bodyText),
+            HeatLevelShu: ParseShuFromText(bodyText),
+            WaterRequirement: Sanitize(GetValue(data, "Water", "Water Needs")),
+            MinDepthInches: ParseDepth(GetValue(data, "Planting Depth", "Depth", "Seed Depth")),
+            Family: null,
+            FruitSizeDescription: Sanitize(GetValue(data, "Fruit Size", "Size", "Fruit Length")),
+            DiseaseResistanceNotes: Sanitize(GetValue(data, "Disease Resistance", "Resistance", "Tolerances")));
+    }
+
+    // ── Botanical Interests ───────────────────────────────────────────────────
+
+    private async Task<ExternalPlantResult?> TryBotanicalInterestsAsync(string query, CancellationToken ct)
+    {
+        try
+        {
+            var searchUrl = $"https://www.botanicalinterests.com/search?q={Uri.EscapeDataString(query)}";
+            var html = await FetchHtmlAsync(searchUrl, ct);
+            if (html is null) return null;
+
+            var context = BrowsingContext.New(Configuration.Default);
+            using var searchDoc = await context.OpenAsync(req => req.Content(html), ct);
+
+            var productUrl = searchDoc.QuerySelectorAll("a[href]")
+                .Select(a => a.GetAttribute("href"))
+                .FirstOrDefault(href =>
+                    href != null &&
+                    href.Contains("botanicalinterests.com/products/", StringComparison.OrdinalIgnoreCase));
+
+            if (productUrl is null) return null;
+
+            var productHtml = await FetchHtmlAsync(productUrl, ct);
+            if (productHtml is null) return null;
+
+            return await ParseBotanicalInterestsDetailAsync(productUrl, productHtml, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Botanical Interests scrape failed for '{Query}'", query);
+            return null;
+        }
+    }
+
+    private static async Task<ExternalPlantResult?> ParseBotanicalInterestsDetailAsync(
+        string url, string html, CancellationToken ct)
+    {
+        var context = BrowsingContext.New(Configuration.Default);
+        using var doc = await context.OpenAsync(req => req.Content(html), ct);
+
+        var heading = doc.QuerySelector("h1")?.TextContent?.Trim();
+        if (string.IsNullOrWhiteSpace(heading)) return null;
+
+        // Botanical Interests has structured Sowing + Growing sections with <dt>/<dd> pairs
+        var data = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var dts = doc.QuerySelectorAll("dt");
+        foreach (var dt in dts)
+        {
+            var label = dt.TextContent.Trim();
+            var value = (dt.NextElementSibling is IElement dd && dd.TagName == "DD")
+                ? dd.TextContent.Trim() : null;
+            if (!string.IsNullOrWhiteSpace(label) && !string.IsNullOrWhiteSpace(value))
+                data.TryAdd(label, value);
+        }
+
+        var description = doc.QuerySelectorAll(".product-description p, .description p, main p")
+            .Select(p => p.TextContent.Trim())
+            .FirstOrDefault(t => t.Length > 60);
+
+        var bodyText = string.Join(" ", doc.QuerySelectorAll("main p, .product-description p")
+            .Select(p => p.TextContent.Trim())
+            .Where(t => t.Length > 0));
+
+        var slug = Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            ? uri.AbsolutePath.Trim('/').Replace('/', '-')
+            : heading.ToLowerInvariant().Replace(' ', '-');
+
+        return new ExternalPlantResult(
+            ExternalId: "botanical:" + slug,
+            CommonName: heading,
+            ScientificName: ExtractScientificNameFromText(bodyText.Length > 600 ? bodyText[..600] : bodyText),
+            Description: description is null ? null : Truncate(description, 1800),
+            MinSpacingInches: ParseFirstNumber(GetValue(data, "Spacing", "Plant Spacing", "Thin to")),
+            SunRequirement: Sanitize(GetValue(data, "Sun", "Light", "Sun Exposure")),
+            DaysToMaturity: ParseFirstInt(GetValue(data, "Days to Maturity", "Maturity", "Days from Transplant"))
+                ?? ParseDaysToMaturityFromText(bodyText),
+            HeatLevelShu: ParseShuFromText(bodyText),
+            WaterRequirement: Sanitize(GetValue(data, "Water", "Water Needs", "Watering")),
+            MinDepthInches: ParseDepth(GetValue(data, "Planting Depth", "Depth", "Sow Depth")),
+            Family: null,
+            FruitSizeDescription: Sanitize(GetValue(data, "Fruit Size", "Size", "Fruit")),
+            DiseaseResistanceNotes: Sanitize(GetValue(data, "Disease Resistance", "Resistance", "Tolerant to")));
+    }
 
     [GeneratedRegex(@"([\d,]+)\s*(?:to\s*[\d,]+\s*)?(?:SHU|Scoville\s+Heat\s+Units?|Scoville\s+units?)",
         RegexOptions.IgnoreCase)]

@@ -62,7 +62,8 @@ public class SearchPlantsHandler(AppDbContext db, IPlantDataService plantDataSer
             query = query.Where(p =>
                 p.CommonName.ToLower().Contains(q) ||
                 (p.ScientificName != null && p.ScientificName.ToLower().Contains(q)) ||
-                (p.Family != null && p.Family.ToLower().Contains(q)));
+                (p.Family != null && p.Family.ToLower().Contains(q)) ||
+                (p.Aliases != null && p.Aliases.ToLower().Contains(q)));
         }
 
         if (!string.IsNullOrWhiteSpace(request.Family))
@@ -83,7 +84,8 @@ public class SearchPlantsHandler(AppDbContext db, IPlantDataService plantDataSer
                 p.IsGlobal,
                 p.IsApproved,
                 p.ExternalSource,
-                p.ExternalId))
+                p.ExternalId,
+                p.Aliases))
             .ToListAsync(ct);
     }
 

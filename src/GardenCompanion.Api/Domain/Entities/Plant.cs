@@ -20,6 +20,9 @@ public class Plant
     public string? WaterRequirement { get; set; }
     public decimal? MinDepthInches { get; set; }
     public string? Family { get; set; }
+    public string? FruitSizeDescription { get; set; }
+    public string? DiseaseResistanceNotes { get; set; }
+    public string? Aliases { get; set; }
     public DateTime? CachedAt { get; set; }
 
     // Navigation

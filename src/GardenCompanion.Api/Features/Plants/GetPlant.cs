@@ -36,7 +36,10 @@ public class GetPlantHandler(AppDbContext db)
                 p.ExternalSource,
                 p.ExternalId,
                 p.ContributedByUserId,
-                p.CachedAt))
+                p.CachedAt,
+                p.FruitSizeDescription,
+                p.DiseaseResistanceNotes,
+                p.Aliases))
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new KeyNotFoundException($"Plant {request.PlantId} not found.");
 

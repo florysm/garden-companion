@@ -21,3 +21,8 @@ export const getLatestWeather = (householdId: string): Promise<WeatherObservatio
   apiClient
     .get<WeatherObservation[]>(`/api/households/${householdId}/weather`, { params: { limit: 1 } })
     .then(r => r.data[0] ?? null)
+
+export const refreshLatestWeather = (householdId: string): Promise<WeatherObservation | null> =>
+  apiClient
+    .post<WeatherObservation | null>(`/api/households/${householdId}/weather/refresh`)
+    .then(r => r.data)

@@ -1,3 +1,4 @@
+using FluentValidation;
 using GardenCompanion.Api.Common;
 using GardenCompanion.Api.Domain.Entities;
 using GardenCompanion.Api.Domain.Enums;
@@ -89,21 +90,43 @@ public static class TestWeatherStationEndpoint
         app.MapPost("/households/{householdId:guid}/weather-station/test", async (
             Guid householdId,
             UpsertWeatherStationBody body,
+            IValidator<UpsertWeatherStationBody> validator,
             HttpContext ctx,
+            ILogger<TestWeatherStationHandler> logger,
             IMediator mediator,
             CancellationToken ct) =>
         {
+            var validation = await validator.ValidateAsync(body, ct);
+            if (!validation.IsValid)
+                return Results.ValidationProblem(validation.ToDictionary());
+
             var userId = ctx.User.GetUserId();
+            logger.LogInformation(
+                "Testing weather station connection for household {HouseholdId}. Provider={Provider}, HasStationId={HasStationId}, HasApiKey={HasApiKey}.",
+                householdId,
+                body.Provider,
+                !string.IsNullOrWhiteSpace(body.StationId),
+                !string.IsNullOrWhiteSpace(body.ApiKey));
+
             try
             {
                 var result = await mediator.Send(
                     new TestWeatherStationCommand(householdId, userId, body.Provider, body.StationId, body.ApiKey), ct);
+                logger.LogInformation(
+                    "Weather station test succeeded for household {HouseholdId}. Provider={Provider}.",
+                    householdId,
+                    body.Provider);
                 return Results.Ok(result);
             }
             catch (KeyNotFoundException) { return Results.NotFound(); }
             catch (UnauthorizedAccessException) { return Results.Forbid(); }
             catch (InvalidOperationException ex)
             {
+                logger.LogWarning(
+                    ex,
+                    "Weather station test failed for household {HouseholdId}. Provider={Provider}.",
+                    householdId,
+                    body.Provider);
                 return Results.Problem(
                     detail: ex.Message,
                     statusCode: StatusCodes.Status422UnprocessableEntity);

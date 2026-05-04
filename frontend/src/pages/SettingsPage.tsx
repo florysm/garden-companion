@@ -465,6 +465,25 @@ const PROVIDER_LABELS: Record<string, string> = {
   OpenMeteo: 'Open-Meteo (free, no key required)',
 }
 
+function getApiErrorDetail(error: unknown) {
+  if (
+    error &&
+    typeof error === 'object' &&
+    'response' in error &&
+    error.response &&
+    typeof error.response === 'object' &&
+    'data' in error.response &&
+    error.response.data &&
+    typeof error.response.data === 'object' &&
+    'detail' in error.response.data &&
+    typeof error.response.data.detail === 'string'
+  ) {
+    return error.response.data.detail
+  }
+
+  return ''
+}
+
 function WeatherStationSection({ householdId }: { householdId: string }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -492,6 +511,7 @@ function WeatherStationSection({ householdId }: { householdId: string }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [formInitialized, setFormInitialized] = useState(false)
   const [testResult, setTestResult] = useState<WeatherTestResult | null>(null)
+  const [testError, setTestError] = useState('')
 
   useEffect(() => {
     if (station !== undefined && !formInitialized) {
@@ -522,9 +542,21 @@ function WeatherStationSection({ householdId }: { householdId: string }) {
         stationId: stationId.trim() || undefined,
         apiKey: apiKey.trim() || undefined,
       }),
-    onSuccess: (data) => setTestResult(data),
-    onError: () => setTestResult(null),
+    onSuccess: (data) => {
+      setTestResult(data)
+      setTestError('')
+    },
+    onError: (error) => {
+      setTestResult(null)
+      setTestError(getApiErrorDetail(error))
+    },
   })
+
+  function clearTestFeedback() {
+    setTestResult(null)
+    setTestError('')
+    testMutation.reset()
+  }
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteWeatherStation(householdId),
@@ -576,7 +608,7 @@ function WeatherStationSection({ householdId }: { householdId: string }) {
                 labelId="ws-provider-label"
                 label="Provider"
                 value={provider}
-                onChange={e => { setProvider(e.target.value); setProviderError(''); setTestResult(null) }}
+                onChange={e => { setProvider(e.target.value); setProviderError(''); clearTestFeedback() }}
               >
                 {Object.entries(PROVIDER_LABELS).map(([value, label]) => (
                   <MenuItem key={value} value={value}>{label}</MenuItem>
@@ -588,7 +620,7 @@ function WeatherStationSection({ householdId }: { householdId: string }) {
             <TextField
               label="Station ID"
               value={stationId}
-              onChange={e => { setStationId(e.target.value); setTestResult(null) }}
+              onChange={e => { setStationId(e.target.value); clearTestFeedback() }}
               size="small"
               helperText="Required by most providers"
             />
@@ -597,7 +629,7 @@ function WeatherStationSection({ householdId }: { householdId: string }) {
               label="API Key"
               type="password"
               value={apiKey}
-              onChange={e => { setApiKey(e.target.value); setTestResult(null) }}
+              onChange={e => { setApiKey(e.target.value); clearTestFeedback() }}
               size="small"
               helperText={
                 station?.hasApiKey && !apiKey
@@ -618,7 +650,7 @@ function WeatherStationSection({ householdId }: { householdId: string }) {
             )}
             {testMutation.isError && (
               <Alert severity="warning" sx={{ py: 0.5 }}>
-                Could not connect. Check your station ID and credentials.
+                {testError || 'Could not connect. Check your station ID and credentials.'}
               </Alert>
             )}
             {testResult && (

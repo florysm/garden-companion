@@ -234,6 +234,7 @@ GetAmendmentLogsEndpoint.Map(api);
 // Weather Observations
 LogWeatherObservationEndpoint.Map(api);
 GetWeatherObservationsEndpoint.Map(api);
+RefreshLatestWeatherObservationEndpoint.Map(api);
 
 // User Insights
 GetUserInsightsEndpoint.Map(api);

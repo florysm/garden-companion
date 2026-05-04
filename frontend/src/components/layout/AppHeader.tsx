@@ -5,7 +5,7 @@ import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined'
 import { useAuth } from '../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getLatestWeather } from '../../api/weather'
+import { getLatestWeather, refreshLatestWeather } from '../../api/weather'
 
 function greeting(displayName: string) {
   const hour = new Date().getHours()
@@ -26,10 +26,15 @@ export function AppHeader() {
 
   const { data: weather } = useQuery({
     queryKey: ['weather', user?.householdId],
-    queryFn: () => getLatestWeather(user!.householdId!),
+    queryFn: async () => {
+      const householdId = user!.householdId!
+      return await refreshLatestWeather(householdId)
+        .catch(() => getLatestWeather(householdId))
+    },
     enabled: !!user?.householdId,
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 10 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchInterval: 15 * 60 * 1000,
   })
 
   return (

@@ -36,7 +36,7 @@ public class RegisterUserHandlerTests
 
         var refreshToken = await db.UserRefreshTokens.SingleAsync();
         refreshToken.UserId.Should().Be(user.Id);
-        refreshToken.Token.Should().Be(response.RefreshToken);
+        refreshToken.Token.Should().Be(TokenService.HashToken(response.RefreshToken));
     }
 
     [Fact]

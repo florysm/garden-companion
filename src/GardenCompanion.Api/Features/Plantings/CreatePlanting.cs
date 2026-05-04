@@ -3,7 +3,6 @@ using GardenCompanion.Api.Common;
 using GardenCompanion.Api.Domain.Entities;
 using GardenCompanion.Api.Domain.Enums;
 using GardenCompanion.Api.Infrastructure.Data;
-using GardenCompanion.Api.Infrastructure.ExternalData;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,9 +14,7 @@ public record CreatePlantingCommand(
     Guid GardenId,
     Guid UserId,
     Guid GardenBedId,
-    Guid? PlantId,
-    string? ExternalPlantId,
-    ExternalSource? ExternalPlantSource,
+    Guid PlantId,
     DateOnly PlantedDate,
     DateOnly? ExpectedHarvestDate,
     PlantingType PlantingType,
@@ -30,9 +27,7 @@ public record CreatePlantingCommand(
 
 public record CreatePlantingBody(
     Guid GardenBedId,
-    Guid? PlantId,
-    string? ExternalPlantId,
-    ExternalSource? ExternalPlantSource,
+    Guid PlantId,
     DateOnly PlantedDate,
     DateOnly? ExpectedHarvestDate,
     PlantingType PlantingType,
@@ -46,14 +41,7 @@ public class CreatePlantingValidator : AbstractValidator<CreatePlantingBody>
     public CreatePlantingValidator()
     {
         RuleFor(x => x.GardenBedId).NotEmpty();
-        RuleFor(x => x)
-            .Must(x => (x.PlantId.HasValue && x.PlantId != Guid.Empty) || !string.IsNullOrWhiteSpace(x.ExternalPlantId))
-            .WithName("PlantId")
-            .WithMessage("Either PlantId or ExternalPlantId must be provided.");
-        RuleFor(x => x.ExternalPlantSource)
-            .NotNull()
-            .When(x => !string.IsNullOrWhiteSpace(x.ExternalPlantId))
-            .WithMessage("ExternalPlantSource is required when ExternalPlantId is provided.");
+        RuleFor(x => x.PlantId).NotEmpty();
         RuleFor(x => x.PlantedDate).NotEmpty();
         RuleFor(x => x.Quantity).GreaterThan(0).LessThanOrEqualTo(10000);
         RuleFor(x => x.SeasonYear).InclusiveBetween(2000, 2100).When(x => x.SeasonYear.HasValue);
@@ -62,7 +50,7 @@ public class CreatePlantingValidator : AbstractValidator<CreatePlantingBody>
 
 // ── Handler ──────────────────────────────────────────────────────────────────
 
-public class CreatePlantingHandler(AppDbContext db, IPlantDataService plantDataService)
+public class CreatePlantingHandler(AppDbContext db)
     : IRequestHandler<CreatePlantingCommand, PlantingDetailDto>
 {
     public async Task<PlantingDetailDto> Handle(
@@ -77,8 +65,11 @@ public class CreatePlantingHandler(AppDbContext db, IPlantDataService plantDataS
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new KeyNotFoundException($"Garden bed {request.GardenBedId} not found in garden {request.GardenId}.");
 
-        // Resolve plant — from local DB or by importing an external scraped result
-        var plant = await ResolveOrImportPlantAsync(request, cancellationToken);
+        var plant = await db.Plants
+            .Where(p => p.Id == request.PlantId
+                && ((p.IsGlobal && p.IsApproved) || p.ContributedByUserId == request.UserId))
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new KeyNotFoundException($"Plant {request.PlantId} not found.");
 
         var plantedDate = request.PlantedDate;
         var seasonYear = request.SeasonYear ?? plantedDate.Year;
@@ -130,56 +121,6 @@ public class CreatePlantingHandler(AppDbContext db, IPlantDataService plantDataS
             HarvestCount: 0);
     }
 
-    private async Task<Plant> ResolveOrImportPlantAsync(
-        CreatePlantingCommand request, CancellationToken ct)
-    {
-        if (!string.IsNullOrWhiteSpace(request.ExternalPlantId))
-        {
-            // Check if the plant was already imported by a previous request
-            var existing = await db.Plants
-                .Where(p => p.ExternalId == request.ExternalPlantId)
-                .FirstOrDefaultAsync(ct);
-
-            if (existing is not null)
-                return existing;
-
-            // Scrape and store the plant data now that the user has chosen this plant
-            var ext = await plantDataService.GetAsync(request.ExternalPlantId, ct)
-                ?? throw new KeyNotFoundException($"Plant data not found for external ID '{request.ExternalPlantId}'.");
-
-            var imported = new Plant
-            {
-                Id = Guid.NewGuid(),
-                ExternalId = ext.ExternalId,
-                ExternalSource = request.ExternalPlantSource ?? ExternalSource.Scraped,
-                CommonName = ext.CommonName,
-                ScientificName = ext.ScientificName,
-                Description = ext.Description,
-                MinSpacingInches = ext.MinSpacingInches,
-                SunRequirement = ext.SunRequirement,
-                DaysToMaturity = ext.DaysToMaturity,
-                HeatLevelShu = ext.HeatLevelShu,
-                WaterRequirement = ext.WaterRequirement,
-                MinDepthInches = ext.MinDepthInches,
-                Family = ext.Family,
-                FruitSizeDescription = ext.FruitSizeDescription,
-                DiseaseResistanceNotes = ext.DiseaseResistanceNotes,
-                Aliases = ext.Aliases,
-                IsGlobal = true,
-                IsApproved = true,
-                CachedAt = DateTime.UtcNow,
-            };
-            db.Plants.Add(imported);
-            return imported;
-        }
-
-        return await db.Plants
-            .Where(p => p.Id == request.PlantId
-                && ((p.IsGlobal && p.IsApproved) || p.ContributedByUserId == request.UserId))
-            .FirstOrDefaultAsync(ct)
-            ?? throw new KeyNotFoundException($"Plant {request.PlantId} not found.");
-    }
-
     private static SeasonType InferSeason(int month) => month switch
     {
         3 or 4 or 5 => SeasonType.Spring,
@@ -213,8 +154,6 @@ public static class CreatePlantingEndpoint
                 userId,
                 body.GardenBedId,
                 body.PlantId,
-                body.ExternalPlantId,
-                body.ExternalPlantSource,
                 body.PlantedDate,
                 body.ExpectedHarvestDate,
                 body.PlantingType,

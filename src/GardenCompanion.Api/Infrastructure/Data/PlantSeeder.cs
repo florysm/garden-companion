@@ -1,18 +1,87 @@
 using GardenCompanion.Api.Domain.Entities;
 using GardenCompanion.Api.Domain.Enums;
+using GardenCompanion.Api.Infrastructure.ExternalData;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace GardenCompanion.Api.Infrastructure.Data;
 
 public static class PlantSeeder
 {
-    public static async Task SeedAsync(AppDbContext db)
+    public static async Task SeedAsync(
+        AppDbContext db,
+        IPlantDataService plantDataService,
+        ILogger logger,
+        CancellationToken ct = default)
     {
-        if (await db.Plants.AnyAsync(p => p.ExternalSource == ExternalSource.Manual))
-            return;
+        // Phase 1: static manually-curated plants
+        if (!await db.Plants.AnyAsync(p => p.ExternalSource == ExternalSource.Manual, ct))
+        {
+            db.Plants.AddRange(Plants());
+            await db.SaveChangesAsync(ct);
+        }
 
-        db.Plants.AddRange(Plants());
-        await db.SaveChangesAsync();
+        // Phase 2: cultivars sourced from the scraper map
+        var cultivarNames = plantDataService.GetCultivarNames();
+        logger.LogInformation("PlantSeeder: checking {Count} cultivars…", cultivarNames.Count);
+
+        foreach (var name in cultivarNames)
+        {
+            var nameLower = name.ToLower();
+            var alreadySeeded = await db.Plants.AnyAsync(
+                p => p.CommonName.ToLower().Contains(nameLower), ct);
+            if (alreadySeeded) continue;
+
+            List<ExternalPlantResult> results;
+            try
+            {
+                results = await plantDataService.SearchAsync(name, ct);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "PlantSeeder: scrape failed for '{Name}' — skipping.", name);
+                continue;
+            }
+
+            var ext = results.FirstOrDefault();
+            if (ext is null)
+            {
+                logger.LogWarning("PlantSeeder: no data returned for '{Name}' — skipping.", name);
+                continue;
+            }
+
+            // Skip if already in DB (by ExternalId or matching CommonName to avoid duplicating manual plants)
+            var exists = await db.Plants.AnyAsync(
+                p => p.ExternalId == ext.ExternalId
+                  || p.CommonName.ToLower() == ext.CommonName.ToLower(), ct);
+            if (exists) continue;
+
+            db.Plants.Add(new Plant
+            {
+                Id = Guid.NewGuid(),
+                ExternalId = ext.ExternalId,
+                ExternalSource = ExternalSource.Scraped,
+                CommonName = ext.CommonName,
+                ScientificName = ext.ScientificName,
+                Description = ext.Description,
+                MinSpacingInches = ext.MinSpacingInches,
+                SunRequirement = ext.SunRequirement,
+                DaysToMaturity = ext.DaysToMaturity,
+                HeatLevelShu = ext.HeatLevelShu,
+                WaterRequirement = ext.WaterRequirement,
+                MinDepthInches = ext.MinDepthInches,
+                Family = ext.Family,
+                FruitSizeDescription = ext.FruitSizeDescription,
+                DiseaseResistanceNotes = ext.DiseaseResistanceNotes,
+                Aliases = ext.Aliases,
+                IsGlobal = true,
+                IsApproved = true,
+                CachedAt = DateTime.UtcNow,
+            });
+
+            await db.SaveChangesAsync(ct);
+            logger.LogInformation("PlantSeeder: seeded '{CommonName}' ({ExternalId}).", ext.CommonName, ext.ExternalId);
+        }
     }
 
     private static IEnumerable<Plant> Plants() =>

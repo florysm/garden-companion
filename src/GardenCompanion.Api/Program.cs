@@ -22,6 +22,8 @@ using GardenCompanion.Api.Features.SoilTests;
 using GardenCompanion.Api.Infrastructure.Data;
 using GardenCompanion.Api.Infrastructure.Email;
 using GardenCompanion.Api.Infrastructure.ExternalData;
+using GardenCompanion.Api.Infrastructure.ExternalData.Weather;
+using GardenCompanion.Api.Infrastructure.ExternalData.Weather.Providers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -96,15 +98,40 @@ builder.Services.AddCors(options =>
 // ── OpenAPI ───────────────────────────────────────────────────────────────────
 builder.Services.AddOpenApi();
 
+// ── Plant seeding (background, dev only) ─────────────────────────────────────
+if (builder.Environment.IsDevelopment())
+    builder.Services.AddHostedService<PlantSeedingService>();
+
+// ── Weather polling ───────────────────────────────────────────────────────────
+builder.Services.Configure<WeatherPollingOptions>(
+    builder.Configuration.GetSection("WeatherPolling"));
+
+builder.Services.AddHttpClient("WeatherUnderground", c => c.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddHttpClient("AmbientWeather", c => c.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddHttpClient("WeatherFlowTempest", c => c.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddHttpClient("DavisWeatherLink", c => c.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddHttpClient("OpenMeteo", c =>
+{
+    c.BaseAddress = new Uri("https://api.open-meteo.com/");
+    c.Timeout = TimeSpan.FromSeconds(15);
+});
+
+builder.Services.AddSingleton<IWeatherProvider, WeatherUndergroundProvider>();
+builder.Services.AddSingleton<IWeatherProvider, AmbientWeatherProvider>();
+builder.Services.AddSingleton<IWeatherProvider, WeatherFlowTempestProvider>();
+builder.Services.AddSingleton<IWeatherProvider, DavisWeatherLinkProvider>();
+builder.Services.AddSingleton<IWeatherProvider, OpenMeteoProvider>();
+
+builder.Services.AddHostedService<WeatherPollingService>();
+
 var app = builder.Build();
 
-// ── Migrate on startup (dev convenience) ─────────────────────────────────────
+// ── Migrate on startup; seeding runs in the background ───────────────────────
 if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
-    await PlantSeeder.SeedAsync(db);
     app.MapOpenApi();
 }
 
@@ -138,6 +165,7 @@ RemoveHouseholdMemberEndpoint.Map(api);
 GetWeatherStationEndpoint.Map(api);
 UpsertWeatherStationEndpoint.Map(api);
 DeleteWeatherStationEndpoint.Map(api);
+TestWeatherStationEndpoint.Map(api);
 
 // Gardens
 GetGardenTypesEndpoint.Map(api);

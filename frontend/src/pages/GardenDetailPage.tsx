@@ -416,6 +416,11 @@ function MembersSection({ gardenId, members, isOwner }: { gardenId: string; memb
           </Box>
         ))}
       </Card>
+      {removeMutation.isError && (
+        <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1 }}>
+          Could not remove member. Please try again.
+        </Typography>
+      )}
 
       {isOwner && (
         <Box sx={{ mt: 2 }}>

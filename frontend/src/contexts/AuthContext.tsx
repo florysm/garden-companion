@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const updateUser = useCallback((updates: Partial<Pick<AuthUser, 'displayName' | 'householdId'>>) => {
-    if (updates.displayName) localStorage.setItem('displayName', updates.displayName)
+    if ('displayName' in updates) localStorage.setItem('displayName', updates.displayName ?? '')
     if ('householdId' in updates) {
       if (updates.householdId) {
         localStorage.setItem('householdId', updates.householdId)

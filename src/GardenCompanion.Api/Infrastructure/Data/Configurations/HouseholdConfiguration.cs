@@ -13,6 +13,8 @@ public class HouseholdConfiguration : IEntityTypeConfiguration<Household>
         builder.Property(h => h.Id).ValueGeneratedOnAdd();
         builder.Property(h => h.Name).HasMaxLength(100).IsRequired();
         builder.Property(h => h.CreatedAt).IsRequired();
+        builder.Property(h => h.Latitude).IsRequired(false);
+        builder.Property(h => h.Longitude).IsRequired(false);
 
         builder.HasIndex(h => h.OwnedByUserId).HasDatabaseName("IX_Households_OwnedByUserId");
 

@@ -1,19 +1,7 @@
-using GardenCompanion.Api.Infrastructure.ExternalData;
-
 namespace GardenCompanion.Api.Tests.Features.Plantings;
 
 public class CreatePlantingHandlerTests
 {
-    // Minimal fake — these tests only exercise local plant creation
-    private sealed class FakePlantDataService : IPlantDataService
-    {
-        public Task<List<ExternalPlantResult>> SearchAsync(string query, CancellationToken ct) =>
-            Task.FromResult<List<ExternalPlantResult>>([]);
-
-        public Task<ExternalPlantResult?> GetAsync(string externalId, CancellationToken ct) =>
-            Task.FromResult<ExternalPlantResult?>(null);
-    }
-
     [Fact]
     public async Task Handle_CreatesPlantingAndDerivesExpectedHarvestDate()
     {
@@ -31,7 +19,7 @@ public class CreatePlantingHandlerTests
         db.AddRange(user, household, householdMember, garden, gardenMember, bed, plant);
         await db.SaveChangesAsync();
 
-        var handler = new CreatePlantingHandler(db, new FakePlantDataService());
+        var handler = new CreatePlantingHandler(db);
         var plantedDate = new DateOnly(2026, 4, 18);
 
         var result = await handler.Handle(
@@ -40,8 +28,6 @@ public class CreatePlantingHandlerTests
                 UserId: user.Id,
                 GardenBedId: bed.Id,
                 PlantId: plant.Id,
-                ExternalPlantId: null,
-                ExternalPlantSource: null,
                 PlantedDate: plantedDate,
                 ExpectedHarvestDate: null,
                 PlantingType: PlantingType.Annual,
@@ -81,7 +67,7 @@ public class CreatePlantingHandlerTests
         db.AddRange(owner, requestingUser, household, householdOwner, garden, bed, plant);
         await db.SaveChangesAsync();
 
-        var handler = new CreatePlantingHandler(db, new FakePlantDataService());
+        var handler = new CreatePlantingHandler(db);
 
         var act = () => handler.Handle(
             new CreatePlantingCommand(
@@ -89,8 +75,6 @@ public class CreatePlantingHandlerTests
                 UserId: requestingUser.Id,
                 GardenBedId: bed.Id,
                 PlantId: plant.Id,
-                ExternalPlantId: null,
-                ExternalPlantSource: null,
                 PlantedDate: new DateOnly(2026, 4, 18),
                 ExpectedHarvestDate: null,
                 PlantingType: PlantingType.Annual,
@@ -130,7 +114,7 @@ public class CreatePlantingHandlerTests
             plant);
         await db.SaveChangesAsync();
 
-        var handler = new CreatePlantingHandler(db, new FakePlantDataService());
+        var handler = new CreatePlantingHandler(db);
 
         var act = () => handler.Handle(
             new CreatePlantingCommand(
@@ -138,8 +122,6 @@ public class CreatePlantingHandlerTests
                 UserId: user.Id,
                 GardenBedId: otherBed.Id,
                 PlantId: plant.Id,
-                ExternalPlantId: null,
-                ExternalPlantSource: null,
                 PlantedDate: new DateOnly(2026, 4, 18),
                 ExpectedHarvestDate: null,
                 PlantingType: PlantingType.Annual,

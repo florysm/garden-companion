@@ -7,6 +7,8 @@ public class Household
     public Guid OwnedByUserId { get; set; }
     public Guid? WeatherStationIntegrationId { get; set; }
     public DateTime CreatedAt { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
 
     // Navigation
     public User Owner { get; set; } = null!;

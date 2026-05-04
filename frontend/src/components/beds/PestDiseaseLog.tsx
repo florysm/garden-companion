@@ -148,6 +148,11 @@ function LogRow({
           >
             Mark resolved
           </Button>
+          {resolveMutation.isError && (
+            <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
+              Could not resolve. Please try again.
+            </Typography>
+          )}
         </Box>
       )}
     </Stack>

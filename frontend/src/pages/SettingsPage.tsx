@@ -7,7 +7,12 @@ import {
   Chip,
   Container,
   Divider,
+  FormControl,
+  FormHelperText,
   IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
   Skeleton,
   Stack,
   Switch,
@@ -19,6 +24,7 @@ import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined'
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined'
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined'
+import WbCloudyOutlinedIcon from '@mui/icons-material/WbCloudyOutlined'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getUserSettings, updateUserSettings } from '../api/users'
@@ -28,6 +34,11 @@ import {
   updateHousehold,
   inviteHouseholdMember,
   removeHouseholdMember,
+  getWeatherStation,
+  upsertWeatherStation,
+  deleteWeatherStation,
+  testWeatherStation,
+  type WeatherTestResult,
 } from '../api/households'
 import { useAuth } from '../contexts/AuthContext'
 import { AppHeader } from '../components/layout/AppHeader'
@@ -364,7 +375,7 @@ function HouseholdSection({ householdId }: { householdId: string }) {
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.7rem' }}>
         Members
       </Typography>
-      <Card sx={{ p: 0, overflow: 'hidden', mb: isOwner ? 3 : 0 }}>
+      <Card sx={{ p: 0, overflow: 'hidden', mb: removeMutation.isError ? 1 : isOwner ? 3 : 0 }}>
         {household?.members.map((member, idx) => (
           <Box key={member.userId}>
             {idx > 0 && <Divider />}
@@ -400,6 +411,11 @@ function HouseholdSection({ householdId }: { householdId: string }) {
           </Box>
         ))}
       </Card>
+      {removeMutation.isError && (
+        <Typography variant="caption" color="error" sx={{ display: 'block', mb: isOwner ? 3 : 0 }}>
+          Could not remove member. Please try again.
+        </Typography>
+      )}
 
       {/* Invite form (owner only) */}
       {isOwner && (
@@ -439,6 +455,253 @@ function HouseholdSection({ householdId }: { householdId: string }) {
   )
 }
 
+// ── Weather station section ───────────────────────────────────────────────────
+
+const PROVIDER_LABELS: Record<string, string> = {
+  WeatherUnderground: 'Weather Underground',
+  AmbientWeather: 'Ambient Weather',
+  WeatherFlowTempest: 'WeatherFlow Tempest',
+  DavisWeatherLink: 'Davis WeatherLink',
+  OpenMeteo: 'Open-Meteo (free, no key required)',
+}
+
+function WeatherStationSection({ householdId }: { householdId: string }) {
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+
+  const { data: household, isLoading: householdLoading } = useQuery({
+    queryKey: ['household', householdId],
+    queryFn: () => getHousehold(householdId),
+  })
+
+  const { data: station, isLoading: stationLoading } = useQuery({
+    queryKey: ['weather-station', householdId],
+    queryFn: () => getWeatherStation(householdId),
+  })
+
+  const isLoading = householdLoading || stationLoading
+  const isOwner = household?.members.some(
+    m => m.userId === user?.userId && m.role === 'Owner'
+  ) ?? false
+
+  const [provider, setProvider] = useState('')
+  const [stationId, setStationId] = useState('')
+  const [apiKey, setApiKey] = useState('')
+  const [providerError, setProviderError] = useState('')
+  const [saved, setSaved] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [formInitialized, setFormInitialized] = useState(false)
+  const [testResult, setTestResult] = useState<WeatherTestResult | null>(null)
+
+  useEffect(() => {
+    if (station !== undefined && !formInitialized) {
+      setProvider(station?.provider ?? '')
+      setStationId(station?.stationId ?? '')
+      setFormInitialized(true)
+    }
+  }, [station, formInitialized])
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      upsertWeatherStation(householdId, {
+        provider,
+        stationId: stationId.trim() || undefined,
+        apiKey: apiKey.trim() || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['weather-station', householdId] })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    },
+  })
+
+  const testMutation = useMutation({
+    mutationFn: () =>
+      testWeatherStation(householdId, {
+        provider,
+        stationId: stationId.trim() || undefined,
+        apiKey: apiKey.trim() || undefined,
+      }),
+    onSuccess: (data) => setTestResult(data),
+    onError: () => setTestResult(null),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteWeatherStation(householdId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['weather-station', householdId] })
+      setProvider('')
+      setStationId('')
+      setApiKey('')
+      setFormInitialized(false)
+      setConfirmDelete(false)
+    },
+  })
+
+  function handleSave(e: FormEvent) {
+    e.preventDefault()
+    if (!provider) {
+      setProviderError('Provider is required.')
+      return
+    }
+    setProviderError('')
+    saveMutation.mutate()
+  }
+
+  if (isLoading) {
+    return (
+      <Card sx={{ p: 3 }}>
+        <Skeleton variant="text" width="35%" height={32} sx={{ mb: 2 }} />
+        <Skeleton variant="rectangular" height={56} sx={{ borderRadius: 1.5, mb: 2 }} />
+        <Skeleton variant="rectangular" height={56} sx={{ borderRadius: 1.5 }} />
+      </Card>
+    )
+  }
+
+  if (!isOwner && !station) return null
+
+  return (
+    <Card sx={{ p: 3 }}>
+      <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 3 }}>
+        <WbCloudyOutlinedIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+        <Typography variant="h6">Weather Station</Typography>
+      </Stack>
+
+      {isOwner ? (
+        <form onSubmit={handleSave} noValidate>
+          <Stack sx={{ gap: 2 }}>
+            <FormControl size="small" fullWidth error={!!providerError}>
+              <InputLabel id="ws-provider-label">Provider</InputLabel>
+              <Select
+                labelId="ws-provider-label"
+                label="Provider"
+                value={provider}
+                onChange={e => { setProvider(e.target.value); setProviderError(''); setTestResult(null) }}
+              >
+                {Object.entries(PROVIDER_LABELS).map(([value, label]) => (
+                  <MenuItem key={value} value={value}>{label}</MenuItem>
+                ))}
+              </Select>
+              {providerError && <FormHelperText>{providerError}</FormHelperText>}
+            </FormControl>
+
+            <TextField
+              label="Station ID"
+              value={stationId}
+              onChange={e => { setStationId(e.target.value); setTestResult(null) }}
+              size="small"
+              helperText="Required by most providers"
+            />
+
+            <TextField
+              label="API Key"
+              type="password"
+              value={apiKey}
+              onChange={e => { setApiKey(e.target.value); setTestResult(null) }}
+              size="small"
+              helperText={
+                station?.hasApiKey && !apiKey
+                  ? 'A key is saved — leave blank to keep it'
+                  : 'Enter your provider API key'
+              }
+            />
+
+            {saveMutation.isError && (
+              <Alert severity="error" sx={{ py: 0.5 }}>
+                Could not save weather station. Please try again.
+              </Alert>
+            )}
+            {deleteMutation.isError && (
+              <Alert severity="error" sx={{ py: 0.5 }}>
+                Could not remove weather station. Please try again.
+              </Alert>
+            )}
+            {testMutation.isError && (
+              <Alert severity="warning" sx={{ py: 0.5 }}>
+                Could not connect. Check your station ID and credentials.
+              </Alert>
+            )}
+            {testResult && (
+              <Alert severity="success" sx={{ py: 0.5 }}>
+                Connected · {Math.round(testResult.temperatureF)}°F · {Math.round(testResult.humidity)}% humidity · {Math.round(testResult.windSpeedMph)} mph wind
+              </Alert>
+            )}
+
+            <Stack direction="row" sx={{ gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Button
+                type="submit"
+                variant="contained"
+                color="secondary"
+                size="small"
+                disabled={saveMutation.isPending}
+              >
+                {saved ? 'Saved!' : saveMutation.isPending ? 'Saving…' : 'Save'}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outlined"
+                color="primary"
+                size="small"
+                disabled={!provider || testMutation.isPending}
+                onClick={() => testMutation.mutate()}
+              >
+                {testMutation.isPending ? 'Testing…' : 'Test Connection'}
+              </Button>
+
+              {station && !confirmDelete && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  Remove Station
+                </Button>
+              )}
+              {station && confirmDelete && (
+                <>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    size="small"
+                    disabled={deleteMutation.isPending}
+                    onClick={() => deleteMutation.mutate()}
+                  >
+                    {deleteMutation.isPending ? 'Removing…' : 'Confirm Remove'}
+                  </Button>
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={() => setConfirmDelete(false)}
+                    disabled={deleteMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
+            </Stack>
+          </Stack>
+        </form>
+      ) : (
+        <Stack sx={{ gap: 0.5 }}>
+          <Typography variant="body2">
+            {PROVIDER_LABELS[station!.provider] ?? station!.provider}
+          </Typography>
+          {station!.stationId && (
+            <Typography variant="caption" color="text.secondary">
+              Station ID: {station!.stationId}
+            </Typography>
+          )}
+          <Typography variant="caption" color="text.secondary">
+            {station!.hasApiKey ? 'API key saved' : 'No API key configured'}
+          </Typography>
+        </Stack>
+      )}
+    </Card>
+  )
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export function SettingsPage() {
@@ -472,6 +735,10 @@ export function SettingsPage() {
             <HouseholdSection householdId={user.householdId} />
           ) : (
             <CreateHouseholdCard onCreated={handleHouseholdCreated} />
+          )}
+
+          {user?.householdId && (
+            <WeatherStationSection householdId={user.householdId} />
           )}
         </Stack>
       </Container>

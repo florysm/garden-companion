@@ -86,7 +86,7 @@ export function ObservationLog({ plantingId }: Props) {
       addObservation(plantingId, {
         observationType: type,
         note,
-        observedAt: observedAt ? new Date(observedAt).toISOString() : undefined,
+        observedAt: observedAt ? new Date(observedAt + 'T00:00:00').toISOString() : undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['observations', plantingId] })

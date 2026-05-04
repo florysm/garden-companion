@@ -9,6 +9,9 @@ public interface IPlantDataService
     /// Returns null if the source is unrecognised or the scrape fails.
     /// </summary>
     Task<ExternalPlantResult?> GetAsync(string externalId, CancellationToken ct);
+
+    /// <summary>Returns the canonical cultivar names registered in the source map.</summary>
+    IReadOnlyList<string> GetCultivarNames();
 }
 
 public record ExternalPlantResult(

@@ -25,7 +25,7 @@
     {
       "label": "Dev: kill chrome debug",
       "type": "shell",
-      "command": "pkill -f 'chrome-debug-profile' 2>/dev/null; sleep 0.5; true",
+      "command": "pkill -f 'chrome-debug-profile' 2>/dev/null; sleep 0.5; rm -f '${workspaceFolder}/.vscode/chrome-debug-profile/Singleton'*; true",
       "problemMatcher": [],
       "presentation": {
         "reveal": "never",

@@ -20,6 +20,24 @@ public partial class ScrapedPlantDataService(HttpClient httpClient, ILogger<Scra
         ["Hot Banana Hungarian Wax"]  = "Hot Banana Pepper",
         ["Marconi Red"]               = "Marconi Pepper",
         ["Giant Marconi"]             = "Marconi Pepper",
+        // Tomatoes
+        ["Brandywine"]               = "Brandywine Tomato",
+        ["San Marzano"]              = "San Marzano Tomato",
+        ["Sungold"]                  = "Sungold Tomato",
+        ["Better Boy"]               = "Better Boy Tomato",
+        ["Celebrity"]                = "Celebrity Tomato",
+        ["Early Girl"]               = "Early Girl Tomato",
+        ["Black Krim"]               = "Black Krim Tomato",
+        // Cucumbers
+        ["Straight Eight"]           = "Straight Eight Cucumber",
+        ["Marketmore"]               = "Marketmore Cucumber",
+        // Squash
+        ["Black Beauty"]             = "Black Beauty Zucchini",
+        // Garlic
+        ["Music"]                    = "Music Garlic",
+        // Herbs
+        ["Genovese"]                 = "Genovese Basil",
+        ["Fernleaf"]                 = "Fernleaf Dill",
     };
 
     // Maps canonical cultivar name → ordered list of (sourcePrefix, querySlug) to try via GetAsync.
@@ -43,6 +61,40 @@ public partial class ScrapedPlantDataService(HttpClient httpClient, ILogger<Scra
         ["Burpless Bush Cucumber"]         = [("almanac", "burpless-bush-cucumber")],
         ["Homemade Pickles Cucumber"]      = [("almanac", "homemade-pickles-cucumber"), ("holmesseed", "homemade-pickles-cucumber")],
         ["Early Bell Pepper"]              = [("almanac", "bell-pepper")],
+        // ── Tomatoes ─────────────────────────────────────────────────────────
+        ["Better Boy Tomato"]             = [("almanac", "better-boy-tomato"), ("burpee", "better-boy-tomato")],
+        ["Celebrity Tomato"]              = [("almanac", "celebrity-tomato")],
+        ["Early Girl Tomato"]             = [("almanac", "early-girl-tomato")],
+        ["Brandywine Tomato"]             = [("almanac", "brandywine-tomato")],
+        ["Cherokee Purple Tomato"]        = [("almanac", "cherokee-purple-tomato")],
+        ["San Marzano Tomato"]            = [("almanac", "san-marzano-tomato")],
+        ["Yellow Pear Tomato"]            = [("almanac", "yellow-pear-tomato")],
+        ["Mortgage Lifter Tomato"]        = [("almanac", "mortgage-lifter-tomato")],
+        ["Sungold Tomato"]                = [("almanac", "sungold-tomato"), ("burpee", "sungold-tomato")],
+        ["Black Krim Tomato"]             = [("almanac", "black-krim-tomato")],
+        // ── Cucumbers ────────────────────────────────────────────────────────
+        ["Straight Eight Cucumber"]       = [("almanac", "straight-eight-cucumber"), ("holmesseed", "straight-eight-cucumber")],
+        ["Marketmore Cucumber"]           = [("almanac", "marketmore-cucumber"), ("holmesseed", "marketmore-cucumber")],
+        ["Lemon Cucumber"]                = [("almanac", "lemon-cucumber")],
+        ["Armenian Cucumber"]             = [("almanac", "armenian-cucumber")],
+        ["Boston Pickling Cucumber"]      = [("almanac", "boston-pickling-cucumber"), ("holmesseed", "boston-pickling-cucumber")],
+        // ── Squash ───────────────────────────────────────────────────────────
+        ["Black Beauty Zucchini"]         = [("almanac", "black-beauty-zucchini"), ("burpee", "black-beauty-zucchini")],
+        ["Acorn Squash"]                  = [("almanac", "acorn-squash")],
+        ["Butternut Squash"]              = [("almanac", "butternut-squash")],
+        ["Spaghetti Squash"]              = [("almanac", "spaghetti-squash")],
+        ["Delicata Squash"]               = [("almanac", "delicata-squash")],
+        // ── Garlic ───────────────────────────────────────────────────────────
+        ["Music Garlic"]                  = [("almanac", "music-garlic")],
+        ["German Red Garlic"]             = [("almanac", "german-red-garlic")],
+        ["Inchelium Red Garlic"]          = [("almanac", "inchelium-red-garlic")],
+        ["California Early White Garlic"] = [("almanac", "california-early-white-garlic")],
+        // ── Herbs ────────────────────────────────────────────────────────────
+        ["Genovese Basil"]                = [("almanac", "genovese-basil"), ("burpee", "genovese-basil")],
+        ["Fernleaf Dill"]                 = [("almanac", "fernleaf-dill"), ("burpee", "fernleaf-dill")],
+        ["Italian Flat Leaf Parsley"]     = [("almanac", "italian-flat-leaf-parsley")],
+        ["Greek Oregano"]                 = [("almanac", "greek-oregano")],
+        ["English Lavender"]              = [("almanac", "english-lavender")],
     };
 
     public async Task<List<ExternalPlantResult>> SearchAsync(string query, CancellationToken ct)
@@ -106,6 +158,8 @@ public partial class ScrapedPlantDataService(HttpClient httpClient, ILogger<Scra
             return null;
         }
     }
+
+    public IReadOnlyList<string> GetCultivarNames() => _cultivarSourceMap.Keys.ToList();
 
     private async Task<ExternalPlantResult?> FetchAlmanacBySlugAsync(string slug, CancellationToken ct)
     {

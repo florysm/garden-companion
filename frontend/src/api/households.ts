@@ -31,3 +31,57 @@ export const inviteHouseholdMember = (householdId: string, email: string): Promi
 
 export const removeHouseholdMember = (householdId: string, userId: string): Promise<void> =>
   apiClient.delete(`/api/households/${householdId}/members/${userId}`).then(() => undefined)
+
+export interface WeatherStationDto {
+  id: string
+  provider: string
+  stationId: string | null
+  hasApiKey: boolean
+  createdAt: string
+}
+
+export interface UpsertWeatherStationBody {
+  provider: string
+  stationId?: string
+  apiKey?: string
+}
+
+export const getWeatherStation = (householdId: string): Promise<WeatherStationDto | null> =>
+  apiClient
+    .get<WeatherStationDto>(`/api/households/${householdId}/weather-station`)
+    .then(r => r.data)
+    .catch((e) => {
+      if (e?.response?.status === 404) return null
+      throw e
+    })
+
+export const upsertWeatherStation = (
+  householdId: string,
+  body: UpsertWeatherStationBody,
+): Promise<WeatherStationDto> =>
+  apiClient
+    .put<WeatherStationDto>(`/api/households/${householdId}/weather-station`, body)
+    .then(r => r.data)
+
+export const deleteWeatherStation = (householdId: string): Promise<void> =>
+  apiClient.delete(`/api/households/${householdId}/weather-station`).then(() => undefined)
+
+export interface WeatherTestResult {
+  temperatureF: number
+  humidity: number
+  windSpeedMph: number
+  windDirectionDegrees: number | null
+  precipitationRateInPerHr: number
+  uvIndex: number | null
+  dewPointF: number | null
+  pressureInHg: number | null
+  stationId: string | null
+}
+
+export const testWeatherStation = (
+  householdId: string,
+  body: UpsertWeatherStationBody,
+): Promise<WeatherTestResult> =>
+  apiClient
+    .post<WeatherTestResult>(`/api/households/${householdId}/weather-station/test`, body)
+    .then(r => r.data)
